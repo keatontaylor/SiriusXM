@@ -367,8 +367,6 @@ class SiriusXM:
         """
         Prefix the AAC segment with an ID3v2.3 tag so VLC updates metadata.
         """
-        if not artist or not title:
-            return aac_data  # nothing to inject
     
         tag = build_id3_tag(self, self.current_artist, self.current_title)
         return tag + aac_data
@@ -447,6 +445,7 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             pass
         httpd.server_close()
+
 
 
 
