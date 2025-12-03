@@ -168,6 +168,16 @@ class SiriusXM:
         # get status
         try:
             status = data['ModuleListResponse']['status']
+            musicdata = data['ModuleListResponse']['moduleList']['modules'][0]['moduleResponse']['liveChannelData']
+            station = musicdata['markerLists'][0]['markers'][0]['episode']['longTitle']
+
+            data_to_log = {
+                'title': musicdata['markerLists'][3]['markers'][-1]['cut']['title'],
+                'artist': musicdata['markerLists'][3]['markers'][-1]['cut']['artists'][0]['name'],
+                'station': station,
+                'playing': True,
+            }
+            self.log(data_to_log)
             message = data['ModuleListResponse']['messages'][0]['message']
             message_code = data['ModuleListResponse']['messages'][0]['code']
         except (KeyError, IndexError):
@@ -384,3 +394,4 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             pass
         httpd.server_close()
+
