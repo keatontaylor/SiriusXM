@@ -8,6 +8,7 @@ import sys
 import os
 import struct
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from Crypto.Cipher import AES
 
 class SiriusXM:
     USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/604.5.6 (KHTML, like Gecko) Version/11.0.3 Safari/604.5.6'
@@ -234,7 +235,6 @@ class SiriusXM:
         
         for x in res.text.split('\n'):
             if x.rstrip().endswith('.m3u8'):
-                # first variant should be 256k one
                 return '{}/{}'.format(url.rsplit('/', 1)[0], x.rstrip())
         
         return None
@@ -261,7 +261,6 @@ class SiriusXM:
             self.log('Received status code {} on playlist variant'.format(res.status_code))
             return None
 
-        # add base path to segments
         base_url = url.rsplit('/', 1)[0]
         base_path = base_url[8:].split('/', 1)[1]
         lines = res.text.split('\n')
@@ -293,9 +292,8 @@ class SiriusXM:
             return None
 
         return res.content
-    
+
     def get_channels(self):
-        # download channel list if necessary
         if not self.channels:
             postdata = {
                 'moduleList': {
@@ -314,7 +312,7 @@ class SiriusXM:
             data = self.post('get', postdata)
             if not data:
                 self.log('Unable to get channel list')
-                return (None, None)
+                return []
 
             try:
                 self.channels = data['ModuleListResponse']['moduleList']['modules'][0]['moduleResponse']['contentData']['channelListing']['channels']
@@ -330,47 +328,55 @@ class SiriusXM:
                 return (x['channelGuid'], x['channelId'])
         return (None, None)
 
+    # --------------------- ID3 / AES Helpers -----------------------
     def build_id3_tag(self, artist, title):
-        """
-        Build an ID3v2.3 tag with TIT2 + TPE1 frames (UTF-16).
-        """
         def make_frame(frame_id, text):
-            encoded = text.encode('utf-16')  # BOM included automatically
+            encoded = text.encode('utf-16')
             size = len(encoded)
-            return (
-                frame_id.encode('ascii') +
-                struct.pack(">I", size) +
-                b"\x00\x01" +   # Flags (00 01 = UTF16)
-                encoded
-            )
-    
+            return frame_id.encode('ascii') + struct.pack(">I", size) + b"\x00\x01" + encoded
+
         frame_title = make_frame("TIT2", title)
         frame_artist = make_frame("TPE1", artist)
-    
         frames = frame_title + frame_artist
         size = len(frames)
-    
-        # ID3 header: "ID3", version 3.0, flags 0, size encoded as syncsafe int
+
         def syncsafe(i):
-            return bytes([
-                (i >> 21) & 0x7F,
-                (i >> 14) & 0x7F,
-                (i >> 7) & 0x7F,
-                i & 0x7F
-            ])
-    
+            return bytes([(i >> 21) & 0x7F, (i >> 14) & 0x7F, (i >> 7) & 0x7F, i & 0x7F])
+
         header = b"ID3" + b"\x03\x00" + b"\x00" + syncsafe(size)
         return header + frames
-    
-    
-    def inject_id3_into_aac(self, aac_data):
-        """
-        Prefix the AAC segment with an ID3v2.3 tag so VLC updates metadata.
-        """
-    
-        tag = self.build_id3_tag(self.current_artist, self.current_title)
-        return tag + aac_data
 
+    def strip_existing_id3(self, data):
+        if len(data) < 10 or data[0:3] != b"ID3":
+            return data
+        size_bytes = data[6:10]
+        size = (size_bytes[0]<<21)|(size_bytes[1]<<14)|(size_bytes[2]<<7)|size_bytes[3]
+        tag_len = size + 10
+        return data[tag_len:] if tag_len < len(data) else data
+
+    def inject_id3_into_aac(self, encrypted_data, aes_key):
+        iv = encrypted_data[:16]
+        ciphertext = encrypted_data[16:]
+
+        cipher = AES.new(aes_key, AES.MODE_CBC, iv)
+        decrypted = cipher.decrypt(ciphertext)
+
+        pad = decrypted[-1]
+        if pad > 0 and pad <= 16:
+            decrypted = decrypted[:-pad]
+
+        decrypted = self.strip_existing_id3(decrypted)
+        tag = self.build_id3_tag(self.current_artist, self.current_title)
+        new_plain = tag + decrypted
+
+        pad_len = 16 - (len(new_plain) % 16)
+        new_plain += bytes([pad_len]) * pad_len
+
+        cipher = AES.new(aes_key, AES.MODE_CBC, iv)
+        new_ciphertext = cipher.encrypt(new_plain)
+        return iv + new_ciphertext
+
+# ---------------------- HTTP Handler ------------------------
 def make_sirius_handler(sxm):
     class SiriusHandler(BaseHTTPRequestHandler):
         HLS_AES_KEY = base64.b64decode('0Nsco7MAgxowGvkUT8aYag==')
@@ -386,14 +392,11 @@ def make_sirius_handler(sxm):
                 else:
                     self.send_response(500)
                     self.end_headers()
+
             elif self.path.endswith('.aac'):
                 data = sxm.get_segment(self.path[1:])
                 if data:
-                    # Inject ID3 metadata
-                    artist = getattr(sxm, "current_artist", "could not fetch artist")
-                    title = getattr(sxm, "current_title", "could not fetch title")
-                    data = sxm.inject_id3_into_aac(data)
-            
+                    data = sxm.inject_id3_into_aac(data, self.HLS_AES_KEY)
                     self.send_response(200)
                     self.send_header('Content-Type', 'audio/aac')
                     self.end_headers()
@@ -401,6 +404,7 @@ def make_sirius_handler(sxm):
                 else:
                     self.send_response(500)
                     self.end_headers()
+
             elif self.path.endswith('/key/1'):
                 self.send_response(200)
                 self.send_header('Content-Type', 'text/plain')
@@ -411,6 +415,7 @@ def make_sirius_handler(sxm):
                 self.end_headers()
     return SiriusHandler
 
+# ---------------------- Main ------------------------
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='SiriusXM proxy')
     parser.add_argument('username')
@@ -445,11 +450,3 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             pass
         httpd.server_close()
-
-
-
-
-
-
-
-
