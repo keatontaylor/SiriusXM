@@ -19,6 +19,8 @@ class SiriusXM:
         self.username = username
         self.password = password
         self.playlists = {}
+        self.current_title = ""
+        self.current_artist = ""
         self.channels = None
 
     @staticmethod
@@ -177,6 +179,8 @@ class SiriusXM:
                 'station': station,
                 'playing': True,
             }
+            self.current_title = data_to_log['title']
+            self.current_artist = data_to_log['artist']
             self.log(data_to_log)
             message = data['ModuleListResponse']['messages'][0]['message']
             message_code = data['ModuleListResponse']['messages'][0]['code']
@@ -260,10 +264,24 @@ class SiriusXM:
         base_url = url.rsplit('/', 1)[0]
         base_path = base_url[8:].split('/', 1)[1]
         lines = res.text.split('\n')
-        for x in range(len(lines)):
-            if lines[x].rstrip().endswith('.aac'):
-                lines[x] = '{}/{}'.format(base_path, lines[x])
-        return '\n'.join(lines)
+        output = []
+        
+        for line in lines:
+            if line.startswith("#EXTINF:"):
+                # inject "Artist – Title"
+                if hasattr(self, "current_artist") and hasattr(self, "current_title"):
+                    parts = line.split(",", 1)
+                    if len(parts) == 2:
+                        duration = parts[0]
+                        # Replace the text AFTER comma
+                        line = f"{duration},{self.current_artist} – {self.current_title}"
+            elif line.rstrip().endswith(".aac"):
+                # rewrite segment URL
+                line = f"{base_path}/{line}"
+        
+            output.append(line)
+        
+        return "\n".join(output)
 
     def get_segment(self, path, max_attempts=5):
         url = '{}/{}'.format(self.LIVE_PRIMARY_HLS, path)
@@ -394,4 +412,5 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             pass
         httpd.server_close()
+
 
