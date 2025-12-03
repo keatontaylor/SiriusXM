@@ -6,6 +6,7 @@ import json
 import time, datetime
 import sys
 import os
+import struct
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 class SiriusXM:
@@ -179,8 +180,8 @@ class SiriusXM:
                 'station': station,
                 'playing': True,
             }
-            self.current_title = "Rock The Casbah"
-            self.current_artist = "The Clash"
+            self.current_title = data_to_log["title"]
+            self.current_artist = data_to_log["artist"]
             self.log(data_to_log)
             message = data['ModuleListResponse']['messages'][0]['message']
             message_code = data['ModuleListResponse']['messages'][0]['code']
@@ -264,24 +265,10 @@ class SiriusXM:
         base_url = url.rsplit('/', 1)[0]
         base_path = base_url[8:].split('/', 1)[1]
         lines = res.text.split('\n')
-        output = []
-        
-        for line in lines:
-            if line.startswith("#EXTINF:"):
-                # inject "Artist – Title"
-                if hasattr(self, "current_artist") and hasattr(self, "current_title"):
-                    parts = line.split(",", 1)
-                    if len(parts) == 2:
-                        duration = parts[0]
-                        # Replace the text AFTER comma
-                        line = f"{duration},{self.current_artist} – {self.current_title}"
-            elif line.rstrip().endswith(".aac"):
-                # rewrite segment URL
-                line = f"{base_path}/{line}"
-        
-            output.append(line)
-        
-        return "\n".join(output)
+        for x in range(len(lines)):
+            if lines[x].rstrip().endswith('.aac'):
+                lines[x] = '{}/{}'.format(base_path, lines[x])
+        return '\n'.join(lines)
 
     def get_segment(self, path, max_attempts=5):
         url = '{}/{}'.format(self.LIVE_PRIMARY_HLS, path)
@@ -343,6 +330,49 @@ class SiriusXM:
                 return (x['channelGuid'], x['channelId'])
         return (None, None)
 
+    def build_id3_tag(artist, title):
+        """
+        Build an ID3v2.3 tag with TIT2 + TPE1 frames (UTF-16).
+        """
+        def make_frame(frame_id, text):
+            encoded = text.encode('utf-16')  # BOM included automatically
+            size = len(encoded)
+            return (
+                frame_id.encode('ascii') +
+                struct.pack(">I", size) +
+                b"\x00\x01" +   # Flags (00 01 = UTF16)
+                encoded
+            )
+    
+        frame_title = make_frame("TIT2", title)
+        frame_artist = make_frame("TPE1", artist)
+    
+        frames = frame_title + frame_artist
+        size = len(frames)
+    
+        # ID3 header: "ID3", version 3.0, flags 0, size encoded as syncsafe int
+        def syncsafe(i):
+            return bytes([
+                (i >> 21) & 0x7F,
+                (i >> 14) & 0x7F,
+                (i >> 7) & 0x7F,
+                i & 0x7F
+            ])
+    
+        header = b"ID3" + b"\x03\x00" + b"\x00" + syncsafe(size)
+        return header + frames
+    
+    
+    def inject_id3_into_aac(aac_data, artist, title):
+        """
+        Prefix the AAC segment with an ID3v2.3 tag so VLC updates metadata.
+        """
+        if not artist or not title:
+            return aac_data  # nothing to inject
+    
+        tag = build_id3_tag(artist, title)
+        return tag + aac_data
+
 def make_sirius_handler(sxm):
     class SiriusHandler(BaseHTTPRequestHandler):
         HLS_AES_KEY = base64.b64decode('0Nsco7MAgxowGvkUT8aYag==')
@@ -361,8 +391,13 @@ def make_sirius_handler(sxm):
             elif self.path.endswith('.aac'):
                 data = sxm.get_segment(self.path[1:])
                 if data:
+                    # Inject ID3 metadata
+                    artist = getattr(sxm, "current_artist", "could not fetch artist")
+                    title = getattr(sxm, "current_title", "could not fetch title")
+                    data = inject_id3_into_aac(data, artist, title)
+            
                     self.send_response(200)
-                    self.send_header('Content-Type', 'audio/x-aac')
+                    self.send_header('Content-Type', 'audio/aac')
                     self.end_headers()
                     self.wfile.write(data)
                 else:
@@ -412,6 +447,7 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             pass
         httpd.server_close()
+
 
 
 
