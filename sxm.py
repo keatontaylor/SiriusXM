@@ -23,6 +23,7 @@ class SiriusXM:
         self.playlists = {}
         self.current_title = ""
         self.current_artist = ""
+        self.current_art_url = ""
         self.channels = None
 
     @staticmethod
@@ -93,6 +94,7 @@ class SiriusXM:
                 }],
             },
         }
+        print("attempting to login")
         data = self.post('modify/authentication', postdata, authenticate=False)
         if not data:
             return False
@@ -246,6 +248,9 @@ class SiriusXM:
             return None
 
         url = self.get_playlist_url(guid, channel_id, use_cache)
+        if not url:
+            return None
+
         params = {
             'token': self.get_sxmak_token(),
             'consumer': 'k2',
@@ -264,10 +269,22 @@ class SiriusXM:
         base_url = url.rsplit('/', 1)[0]
         base_path = base_url[8:].split('/', 1)[1]
         lines = res.text.split('\n')
-        for x in range(len(lines)):
-            if lines[x].rstrip().endswith('.aac'):
-                lines[x] = '{}/{}'.format(base_path, lines[x])
-        return '\n'.join(lines)
+        new_lines = []
+
+        for line in lines:
+            line = line.rstrip()
+            # Skip any existing EXTINF for .aac segments
+            if line.startswith('#EXTINF'):
+                continue
+            if line.endswith('.aac'):
+                duration = 10.0  # VLC usually ignores, optional
+                new_lines.append(f'#EXTINF:{duration},TEST ARTIST - TEST TITLE')
+                new_lines.append(f'{base_path}/{line}')
+            else:
+                new_lines.append(line)
+
+        return '\n'.join(new_lines)
+
 
     def get_segment(self, path, max_attempts=5):
         url = '{}/{}'.format(self.LIVE_PRIMARY_HLS, path)
@@ -277,6 +294,8 @@ class SiriusXM:
             'gupId': self.get_gup_id(),
         }
         res = self.session.get(url, params=params)
+
+        self.get_playlist(path.split('/', 2)[1], False)
 
         if res.status_code == 403:
             if max_attempts > 0:
@@ -376,6 +395,73 @@ class SiriusXM:
         new_ciphertext = cipher.encrypt(new_plain)
         return iv + new_ciphertext
 
+def decrypt_and_inject_id3_plain(data, aes_key, artist, title, album_art_url=None):
+    from Crypto.Cipher import AES
+    import struct
+    import requests
+
+
+    # --- Decrypt AES-CBC ---
+    iv = data[:16]
+    ciphertext = data[16:]
+    cipher = AES.new(aes_key, AES.MODE_CBC, iv)
+    decrypted = cipher.decrypt(ciphertext)
+
+    # Remove AES padding
+    pad_len = decrypted[-1]
+    if 0 < pad_len <= 16:
+        decrypted = decrypted[:-pad_len]
+
+    # Strip existing ID3
+    if decrypted[:3] == b'ID3':
+        size_bytes = decrypted[6:10]
+        size = (size_bytes[0]<<21)|(size_bytes[1]<<14)|(size_bytes[2]<<7)|size_bytes[3]
+        decrypted = decrypted[size+10:]
+
+    # --- Build ID3v2.3 frames ---
+    def make_text_frame(frame_id, text):
+        encoded = text.encode('utf-16')  # UTF-16 with BOM
+        size = len(encoded) + 1
+        header = frame_id.encode('ascii') + struct.pack('>I', size) + b'\x00\x00'
+        return header + b'\x01' + encoded
+
+    def make_apic_frame(url):
+        try:
+            res = requests.get(url, timeout=3)
+            if res.status_code != 200:
+                return None
+            image_bytes = res.content
+        except:
+            return None
+
+        mime_type = 'image/jpeg' if url.lower().endswith(('.jpg','.jpeg')) else 'image/png'
+        encoding = 0x01  # UTF-16
+        mime_bytes = mime_type.encode('ascii') + b'\x00'
+        desc_bytes = ''.encode('utf-16') + b'\x00\x00'  # empty description
+        pic_type = b'\x03'  # front cover
+        content = bytes([encoding]) + mime_bytes + pic_type + desc_bytes + image_bytes
+        size = len(content)
+        header = b'APIC' + struct.pack('>I', size) + b'\x00\x00'
+        return header + content
+
+    frames = make_text_frame("TIT2", title) + make_text_frame("TPE1", artist)
+    if album_art_url:
+        apic = make_apic_frame(album_art_url)
+        if apic:
+            frames += apic
+
+    # --- Build ID3 header ---
+    size = len(frames)
+    def syncsafe(i):
+        return bytes([(i >> 21) & 0x7F, (i >> 14) & 0x7F, (i >> 7) & 0x7F, i & 0x7F])
+    header = b"ID3" + b"\x03\x00" + b"\x00" + syncsafe(size)
+
+    tag = header + frames
+
+    return tag + decrypted
+
+
+
 # ---------------------- HTTP Handler ------------------------
 def make_sirius_handler(sxm):
     class SiriusHandler(BaseHTTPRequestHandler):
@@ -385,25 +471,34 @@ def make_sirius_handler(sxm):
             if self.path.endswith('.m3u8'):
                 data = sxm.get_playlist(self.path.rsplit('/', 1)[1][:-5])
                 if data:
+                    # Remove any AES key lines
+                    lines = [line for line in data.split('\n') if not line.startswith('#EXT-X-KEY')]
+                    clean_playlist = '\n'.join(lines)
+
                     self.send_response(200)
                     self.send_header('Content-Type', 'application/x-mpegURL')
                     self.end_headers()
-                    self.wfile.write(bytes(data, 'utf-8'))
+                    self.wfile.write(clean_playlist.encode('utf-8'))
                 else:
                     self.send_response(500)
                     self.end_headers()
-
             elif self.path.endswith('.aac'):
                 data = sxm.get_segment(self.path[1:])
                 if data:
-                    data = sxm.inject_id3_into_aac(data, self.HLS_AES_KEY)
+                    # Decrypt and prepend ID3v2 metadata
+                    data = decrypt_and_inject_id3_plain(
+                        data,
+                        self.HLS_AES_KEY,
+                        sxm.current_artist,
+                        sxm.current_title
+                    )
                     self.send_response(200)
                     self.send_header('Content-Type', 'audio/aac')
                     self.end_headers()
                     self.wfile.write(data)
                 else:
                     self.send_response(500)
-                    self.end_headers()
+                    self.end_headers() 
 
             elif self.path.endswith('/key/1'):
                 self.send_response(200)
