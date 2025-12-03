@@ -368,7 +368,7 @@ class SiriusXM:
         Prefix the AAC segment with an ID3v2.3 tag so VLC updates metadata.
         """
     
-        tag = build_id3_tag(self, self.current_artist, self.current_title)
+        tag = self.build_id3_tag(self, self.current_artist, self.current_title)
         return tag + aac_data
 
 def make_sirius_handler(sxm):
@@ -445,6 +445,7 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             pass
         httpd.server_close()
+
 
 
 
