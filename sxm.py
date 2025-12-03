@@ -330,7 +330,7 @@ class SiriusXM:
                 return (x['channelGuid'], x['channelId'])
         return (None, None)
 
-    def build_id3_tag(artist, title):
+    def build_id3_tag(self, artist, title):
         """
         Build an ID3v2.3 tag with TIT2 + TPE1 frames (UTF-16).
         """
@@ -363,14 +363,14 @@ class SiriusXM:
         return header + frames
     
     
-    def inject_id3_into_aac(aac_data, artist, title):
+    def inject_id3_into_aac(self, aac_data):
         """
         Prefix the AAC segment with an ID3v2.3 tag so VLC updates metadata.
         """
         if not artist or not title:
             return aac_data  # nothing to inject
     
-        tag = build_id3_tag(artist, title)
+        tag = build_id3_tag(self, self.current_artist, self.current_title)
         return tag + aac_data
 
 def make_sirius_handler(sxm):
@@ -394,7 +394,7 @@ def make_sirius_handler(sxm):
                     # Inject ID3 metadata
                     artist = getattr(sxm, "current_artist", "could not fetch artist")
                     title = getattr(sxm, "current_title", "could not fetch title")
-                    data = inject_id3_into_aac(data, artist, title)
+                    data = sxm.inject_id3_into_aac(data)
             
                     self.send_response(200)
                     self.send_header('Content-Type', 'audio/aac')
@@ -447,6 +447,7 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             pass
         httpd.server_close()
+
 
 
 
