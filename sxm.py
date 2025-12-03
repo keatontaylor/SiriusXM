@@ -179,8 +179,8 @@ class SiriusXM:
                 'station': station,
                 'playing': True,
             }
-            self.current_title = data_to_log['title']
-            self.current_artist = data_to_log['artist']
+            self.current_title = "Rock The Casbah"
+            self.current_artist = "The Clash"
             self.log(data_to_log)
             message = data['ModuleListResponse']['messages'][0]['message']
             message_code = data['ModuleListResponse']['messages'][0]['code']
@@ -412,5 +412,6 @@ if __name__ == '__main__':
         except KeyboardInterrupt:
             pass
         httpd.server_close()
+
 
 
