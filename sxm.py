@@ -176,6 +176,7 @@ class SiriusXM:
         status = data['ModuleListResponse']['status']
         musicdata = data['ModuleListResponse']['moduleList']['modules'][0]['moduleResponse']['liveChannelData']
         station = musicdata['markerLists'][0]['markers'][0]['episode']['longTitle']
+        self.current_metadata = musicdata['markerLists'][-1]['markers'][-1]['cut']
 
         data_to_log = {
             'title': musicdata['markerLists'][-1]['markers'][-1]['cut']['title'],
