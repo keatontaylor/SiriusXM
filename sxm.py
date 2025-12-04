@@ -191,11 +191,7 @@ class SiriusXM:
                 'station': station,
                 'playing': True,
             }
-            self.current_art_url = (
-                next((musicdata["url"] for a in musicdata.get("album", {}).get("creativeArts", []) 
-                    if a.get("size") == "THUMBNAIL"), 
-                    self.current_channel_art_url)
-            )
+            self.current_art_url = self.current_channel_art_url
             self.current_title = data_to_log["title"]
             self.current_artist = data_to_log["artist"]
             message = data['ModuleListResponse']['messages'][0]['message']
