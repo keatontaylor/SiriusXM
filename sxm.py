@@ -380,7 +380,7 @@ class SiriusXM:
             m3u_lines.append(stream_url)
         return "\n".join(m3u_lines)
 
-    def decrypt_and_inject_id3_plain(self, data, aes_key, artist, title, album_art_url=None):
+    def decrypt_and_inject_id3_plain(self, data, aes_key, artist, title, channel_name, album_art_url=None):
 
         # --- Decrypt AES-CBC ---
         iv = data[:16]
@@ -406,7 +406,7 @@ class SiriusXM:
             header = frame_id.encode('ascii') + struct.pack('>I', size) + b'\x00\x00'
             return header + b'\x01' + encoded
 
-        frames = make_text_frame("TIT2", title) + make_text_frame("TPE1", artist)
+        frames = make_text_frame("TIT2", channel_name + " | " + title) + make_text_frame("TPE1", artist)
 
         # --- Build ID3 header ---
         size = len(frames)
@@ -524,6 +524,7 @@ def make_sirius_handler(sxm):
                         self.HLS_AES_KEY,
                         sxm.current_artist,
                         sxm.current_title,
+                        sxm.current_channel,
 
                     )
                     self.send_response(200)
