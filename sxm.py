@@ -465,11 +465,29 @@ class SiriusXM:
         return tag + decrypted
 
 
-    def inject_id3_mutagen(self, aac_data, artist, title, channel_name, channel_id, album_art_url=None):
+    def inject_id3_mutagen(self, aac_data, aes_key, artist, title, channel_name, channel_id, album_art_url=None):
         """
         aac_data: raw AAC data (bytes)
         Returns: AAC data with prepended ID3v2.3 tag
         """
+
+        # --- Decrypt AES-CBC ---
+        iv = data[:16]
+        ciphertext = data[16:]
+        cipher = AES.new(aes_key, AES.MODE_CBC, iv)
+        decrypted = cipher.decrypt(ciphertext)
+
+        # Remove AES padding
+        pad_len = decrypted[-1]
+        if 0 < pad_len <= 16:
+            decrypted = decrypted[:-pad_len]
+
+        # Strip existing ID3
+        if decrypted[:3] == b'ID3':
+            size_bytes = decrypted[6:10]
+            size = (size_bytes[0]<<21)|(size_bytes[1]<<14)|(size_bytes[2]<<7)|size_bytes[3]
+            decrypted = decrypted[size+10:]
+    
         # Create a new ID3 tag
         id3 = ID3()
 
@@ -500,7 +518,7 @@ class SiriusXM:
         tag_bytes = output.getvalue()
 
         # Prepend tag to AAC data
-        return tag_bytes + aac_data
+        return tag_bytes + decrypted
 
 # ---------------------- HTTP Handler ------------------------
 def make_sirius_handler(sxm):
