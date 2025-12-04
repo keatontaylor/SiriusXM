@@ -9,6 +9,8 @@ import os
 import struct
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from Crypto.Cipher import AES
+from mutagen.id3 import ID3, TIT2, TPE1, APIC
+from io import BytesIO
 
 class SiriusXM:
     USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/604.5.6 (KHTML, like Gecko) Version/11.0.3 Safari/604.5.6'
