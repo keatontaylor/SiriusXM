@@ -190,7 +190,7 @@ class SiriusXM:
                 'playing': True,
             }
             self.current_art_url = (
-                next((a["url"] for a in t.get("album", {}).get("creativeArts", []) 
+                next((musicdata["url"] for a in musicdata.get("album", {}).get("creativeArts", []) 
                     if a.get("size") == "MEDIUM"), 
                     currentChannelArtwork)
             )
