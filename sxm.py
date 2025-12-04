@@ -9,6 +9,9 @@ import os
 import struct
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from Crypto.Cipher import AES
+from mutagen.id3 import ID3, TIT2, TPE1, APIC, ID3NoHeaderError
+from io import BytesIO
+
 
 class SiriusXM:
     USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/604.5.6 (KHTML, like Gecko) Version/11.0.3 Safari/604.5.6'
@@ -462,6 +465,42 @@ class SiriusXM:
         return tag + decrypted
 
 
+    def inject_id3_mutagen(self, aac_data, artist, title, channel_name, channel_id, album_art_url=None):
+        """
+        aac_data: raw AAC data (bytes)
+        Returns: AAC data with prepended ID3v2.3 tag
+        """
+        # Create a new ID3 tag
+        id3 = ID3()
+
+        # Title and artist frames
+        id3.add(TIT2(encoding=3, text=f"{channel_id} {channel_name} | {title}"))  # UTF-8
+        id3.add(TPE1(encoding=3, text=artist))
+
+        # Album art frame
+        if album_art_url:
+            try:
+                resp = requests.get(album_art_url)
+                resp.raise_for_status()
+                img_data = resp.content
+                mime = "image/jpeg" if album_art_url.lower().endswith((".jpg", ".jpeg")) else "image/png"
+                id3.add(APIC(
+                    encoding=3,          # UTF-8
+                    mime=mime,
+                    type=3,              # front cover
+                    desc=u'Cover',
+                    data=img_data
+                ))
+            except Exception as e:
+                print("Failed to fetch album art:", e)
+
+        # Write tag to memory
+        output = BytesIO()
+        id3.save(output, v2_version=3)  # ID3v2.3 for best compatibility
+        tag_bytes = output.getvalue()
+
+        # Prepend tag to AAC data
+        return tag_bytes + aac_data
 
 # ---------------------- HTTP Handler ------------------------
 def make_sirius_handler(sxm):
@@ -571,13 +610,14 @@ def make_sirius_handler(sxm):
                 data = sxm.get_segment(self.path[1:])
                 if data:
                     # Decrypt and prepend ID3v2 metadata
-                    data = sxm.decrypt_and_inject_id3_plain(
+                    data = sxm.inject_id3_mutagen(
                         data,
                         self.HLS_AES_KEY,
                         sxm.current_artist,
                         sxm.current_title,
                         sxm.current_channel,
                         sxm.current_channel_id_user,
+                        "http://albumart.siriusxm.com/albumart/2000/WBHITS_GDCA-112106915-001_t.jpg",
                     )
                     self.send_response(200)
                     self.send_header('Content-Type', 'audio/aac')
