@@ -383,6 +383,46 @@ class SiriusXM:
             m3u_lines.append(stream_url)
         return "\n".join(m3u_lines)
 
+    def channels_to_xspf(self):
+        import xml.etree.ElementTree as ET
+        from xml.dom import minidom
+
+        # Root playlist element
+        playlist = ET.Element("playlist", version="1", xmlns="http://xspf.org/ns/0/")
+        tracklist = ET.SubElement(playlist, "trackList")
+
+        # Get channels sorted by favorite and channel number
+        channels = sorted(
+            self.get_channels(),
+            key=lambda x: (not x.get('isFavorite', False), int(x.get('siriusChannelNumber', 9999)))
+        )
+
+        for ch in channels:
+            cid = ch.get('channelId', '')
+            cnum = ch.get('siriusChannelNumber', '')
+            name = ch.get('name', 'Unknown')
+            stream_url = f"/{cid}.m3u8"
+
+            # Safe fetch of logo
+            logo = (
+                ch.get("images", {})
+                .get("images", [{}]*4)[3]  # ensures index safety
+                .get("url", "")
+            )
+
+            # Create a track element
+            track = ET.SubElement(tracklist, "track")
+            ET.SubElement(track, "location").text = stream_url
+            ET.SubElement(track, "title").text = f"{cnum} {name}"
+            ET.SubElement(track, "identifier").text = cid
+            if logo:
+                ET.SubElement(track, "image").text = logo
+
+        # Pretty print XML
+        xml_str = ET.tostring(playlist, encoding='utf-8')
+        pretty_xml = minidom.parseString(xml_str).toprettyxml(indent="  ")
+        return pretty_xml
+
     def decrypt_and_inject_id3_plain(self, data, aes_key, artist, title, channel_name, channel_id, album_art_url=None):
 
         # --- Decrypt AES-CBC ---
@@ -482,6 +522,15 @@ def make_sirius_handler(sxm):
                 if playlist:
                     self.send_response(200)
                     self.send_header("Content-Type", "audio/mpegurl")
+                    self.end_headers()
+                    self.wfile.write(playlist.encode("utf-8"))
+                else:
+                    self.send_error(404, "No channels available")
+            elif self.path.endswith(".xspf"):
+                playlist = sxm.channels_to_xspf()
+                if playlist:
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/xspf+xml")
                     self.end_headers()
                     self.wfile.write(playlist.encode("utf-8"))
                 else:
