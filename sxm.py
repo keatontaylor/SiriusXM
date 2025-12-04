@@ -23,7 +23,9 @@ class SiriusXM:
         self.playlists = {}
         self.current_title = ""
         self.current_artist = ""
-        self.current_art_url = ""
+        self.current_channel = ""
+        self.current_channel_id = ""
+        self.current_metadata = None
         self.channels = None
 
     @staticmethod
@@ -94,7 +96,6 @@ class SiriusXM:
                 }],
             },
         }
-        print("attempting to login")
         data = self.post('modify/authentication', postdata, authenticate=False)
         if not data:
             return False
@@ -165,7 +166,7 @@ class SiriusXM:
             'marker_mode': 'all_separate_cue_points',
             'result-template': 'web',
             'time': int(round(time.time() * 1000.0)),
-            'timestamp': datetime.datetime.utcnow().isoformat('T') + 'Z'
+            'timestamp': datetime.datetime.now(datetime.UTC).isoformat('T') + 'Z'
         }
         data = self.get('tune/now-playing-live', params)
         if not data:
@@ -176,6 +177,7 @@ class SiriusXM:
             status = data['ModuleListResponse']['status']
             musicdata = data['ModuleListResponse']['moduleList']['modules'][0]['moduleResponse']['liveChannelData']
             station = musicdata['markerLists'][0]['markers'][0]['episode']['longTitle']
+            self.current_metadata = musicdata['markerLists'][3]['markers'][-1]['cut']
 
             data_to_log = {
                 'title': musicdata['markerLists'][3]['markers'][-1]['cut']['title'],
@@ -185,7 +187,6 @@ class SiriusXM:
             }
             self.current_title = data_to_log["title"]
             self.current_artist = data_to_log["artist"]
-            self.log(data_to_log)
             message = data['ModuleListResponse']['messages'][0]['message']
             message_code = data['ModuleListResponse']['messages'][0]['code']
         except (KeyError, IndexError):
@@ -242,7 +243,9 @@ class SiriusXM:
         return None
 
     def get_playlist(self, name, use_cache=True):
-        guid, channel_id = self.get_channel(name)
+        guid, channel_id, channel_name = self.get_channel(name)
+        self.current_channel = channel_name
+        self.current_channel_id = channel_id
         if not guid or not channel_id:
             self.log('No channel for {}'.format(name))
             return None
@@ -278,7 +281,7 @@ class SiriusXM:
                 continue
             if line.endswith('.aac'):
                 duration = 10.0  # VLC usually ignores, optional
-                new_lines.append(f'#EXTINF:{duration},TEST ARTIST - TEST TITLE')
+                new_lines.append(f'#EXTINF:{duration},{self.current_artist} - {self.current_title}')
                 new_lines.append(f'{base_path}/{line}')
             else:
                 new_lines.append(line)
@@ -344,121 +347,67 @@ class SiriusXM:
         name = name.lower()
         for x in self.get_channels():
             if x.get('name', '').lower() == name or x.get('channelId', '').lower() == name or x.get('siriusChannelNumber') == name:
-                return (x['channelGuid'], x['channelId'])
+                return (x['channelGuid'], x['channelId'], x['name'])
         return (None, None)
 
-    # --------------------- ID3 / AES Helpers -----------------------
-    def build_id3_tag(self, artist, title):
-        def make_frame(frame_id, text):
-            encoded = text.encode('utf-16')
-            size = len(encoded)
-            return frame_id.encode('ascii') + struct.pack(">I", size) + b"\x00\x01" + encoded
 
-        frame_title = make_frame("TIT2", title)
-        frame_artist = make_frame("TPE1", artist)
-        frames = frame_title + frame_artist
-        size = len(frames)
+    def channels_to_m3u(self):
+        # Get channels sorted by favorite and channel number
+        channels = list(sorted(
+            self.get_channels(),
+            key=lambda x: (not x.get('isFavorite', False), int(x.get('siriusChannelNumber', 9999)))
+        ))
+        
+        m3u_lines = ["#EXTM3U"]
 
-        def syncsafe(i):
-            return bytes([(i >> 21) & 0x7F, (i >> 14) & 0x7F, (i >> 7) & 0x7F, i & 0x7F])
+        for ch in channels:
+            cid = ch.get('channelId', '')
+            cnum = ch.get('siriusChannelNumber', '')
+            name = ch.get('name', 'Unknown')
+            # Construct a streaming URL — adjust this as needed
+            stream_url = f"http://10.0.1.212:8888/{cid}.m3u8"  
 
-        header = b"ID3" + b"\x03\x00" + b"\x00" + syncsafe(size)
-        return header + frames
+            m3u_lines.append(f"#EXTINF:-1,{cnum} {name}")
+            m3u_lines.append(stream_url)
 
-    def strip_existing_id3(self, data):
-        if len(data) < 10 or data[0:3] != b"ID3":
-            return data
-        size_bytes = data[6:10]
-        size = (size_bytes[0]<<21)|(size_bytes[1]<<14)|(size_bytes[2]<<7)|size_bytes[3]
-        tag_len = size + 10
-        return data[tag_len:] if tag_len < len(data) else data
+        return "\n".join(m3u_lines)
+    def decrypt_and_inject_id3_plain(self, data, aes_key, artist, title, album_art_url=None):
 
-    def inject_id3_into_aac(self, encrypted_data, aes_key):
-        iv = encrypted_data[:16]
-        ciphertext = encrypted_data[16:]
-
+        # --- Decrypt AES-CBC ---
+        iv = data[:16]
+        ciphertext = data[16:]
         cipher = AES.new(aes_key, AES.MODE_CBC, iv)
         decrypted = cipher.decrypt(ciphertext)
 
-        pad = decrypted[-1]
-        if pad > 0 and pad <= 16:
-            decrypted = decrypted[:-pad]
+        # Remove AES padding
+        pad_len = decrypted[-1]
+        if 0 < pad_len <= 16:
+            decrypted = decrypted[:-pad_len]
 
-        decrypted = self.strip_existing_id3(decrypted)
-        tag = self.build_id3_tag(self.current_artist, self.current_title)
-        new_plain = tag + decrypted
+        # Strip existing ID3
+        if decrypted[:3] == b'ID3':
+            size_bytes = decrypted[6:10]
+            size = (size_bytes[0]<<21)|(size_bytes[1]<<14)|(size_bytes[2]<<7)|size_bytes[3]
+            decrypted = decrypted[size+10:]
 
-        pad_len = 16 - (len(new_plain) % 16)
-        new_plain += bytes([pad_len]) * pad_len
+        # --- Build ID3v2.3 frames ---
+        def make_text_frame(frame_id, text):
+            encoded = text.encode('utf-16')  # UTF-16 with BOM
+            size = len(encoded) + 1
+            header = frame_id.encode('ascii') + struct.pack('>I', size) + b'\x00\x00'
+            return header + b'\x01' + encoded
 
-        cipher = AES.new(aes_key, AES.MODE_CBC, iv)
-        new_ciphertext = cipher.encrypt(new_plain)
-        return iv + new_ciphertext
+        frames = make_text_frame("TIT2", title) + make_text_frame("TPE1", artist)
 
-def decrypt_and_inject_id3_plain(data, aes_key, artist, title, album_art_url=None):
-    from Crypto.Cipher import AES
-    import struct
-    import requests
+        # --- Build ID3 header ---
+        size = len(frames)
+        def syncsafe(i):
+            return bytes([(i >> 21) & 0x7F, (i >> 14) & 0x7F, (i >> 7) & 0x7F, i & 0x7F])
+        header = b"ID3" + b"\x03\x00" + b"\x00" + syncsafe(size)
 
+        tag = header + frames
 
-    # --- Decrypt AES-CBC ---
-    iv = data[:16]
-    ciphertext = data[16:]
-    cipher = AES.new(aes_key, AES.MODE_CBC, iv)
-    decrypted = cipher.decrypt(ciphertext)
-
-    # Remove AES padding
-    pad_len = decrypted[-1]
-    if 0 < pad_len <= 16:
-        decrypted = decrypted[:-pad_len]
-
-    # Strip existing ID3
-    if decrypted[:3] == b'ID3':
-        size_bytes = decrypted[6:10]
-        size = (size_bytes[0]<<21)|(size_bytes[1]<<14)|(size_bytes[2]<<7)|size_bytes[3]
-        decrypted = decrypted[size+10:]
-
-    # --- Build ID3v2.3 frames ---
-    def make_text_frame(frame_id, text):
-        encoded = text.encode('utf-16')  # UTF-16 with BOM
-        size = len(encoded) + 1
-        header = frame_id.encode('ascii') + struct.pack('>I', size) + b'\x00\x00'
-        return header + b'\x01' + encoded
-
-    def make_apic_frame(url):
-        try:
-            res = requests.get(url, timeout=3)
-            if res.status_code != 200:
-                return None
-            image_bytes = res.content
-        except:
-            return None
-
-        mime_type = 'image/jpeg' if url.lower().endswith(('.jpg','.jpeg')) else 'image/png'
-        encoding = 0x01  # UTF-16
-        mime_bytes = mime_type.encode('ascii') + b'\x00'
-        desc_bytes = ''.encode('utf-16') + b'\x00\x00'  # empty description
-        pic_type = b'\x03'  # front cover
-        content = bytes([encoding]) + mime_bytes + pic_type + desc_bytes + image_bytes
-        size = len(content)
-        header = b'APIC' + struct.pack('>I', size) + b'\x00\x00'
-        return header + content
-
-    frames = make_text_frame("TIT2", title) + make_text_frame("TPE1", artist)
-    if album_art_url:
-        apic = make_apic_frame(album_art_url)
-        if apic:
-            frames += apic
-
-    # --- Build ID3 header ---
-    size = len(frames)
-    def syncsafe(i):
-        return bytes([(i >> 21) & 0x7F, (i >> 14) & 0x7F, (i >> 7) & 0x7F, i & 0x7F])
-    header = b"ID3" + b"\x03\x00" + b"\x00" + syncsafe(size)
-
-    tag = header + frames
-
-    return tag + decrypted
+        return tag + decrypted
 
 
 
@@ -467,8 +416,58 @@ def make_sirius_handler(sxm):
     class SiriusHandler(BaseHTTPRequestHandler):
         HLS_AES_KEY = base64.b64decode('0Nsco7MAgxowGvkUT8aYag==')
 
-        def do_GET(self):
+        # Override log_message to append extra info
+        def log_message(self, format, *args):
             if self.path.endswith('.m3u8'):
+                extra_info = f"[Current Channel: {sxm.current_channel, sxm.current_channel_id}]"
+            else:
+                extra_info = f"[Playing Now: {sxm.current_title, sxm.current_artist}]"  # Anything you want to append
+            # Original log format is: "%s - - [%s] %s\n"
+            super().log_message(format + " %s", *args, extra_info)
+
+        def do_GET(self):
+            if self.path == "/" or self.path == "/index.html":
+                try:
+                    with open("index.html", "rb") as f:
+                        content = f.read()
+
+                    self.send_response(200)
+                    self.send_header("Content-type", "text/html")
+                    self.end_headers()
+                    self.wfile.write(content)
+                    return
+
+                except FileNotFoundError:
+                    self.send_error(404, "index.html not found")
+                    return
+            elif self.path.endswith(".m3u"):
+                playlist = sxm.channels_to_m3u()
+                if playlist:
+                    self.send_response(200)
+                    self.send_header("Content-Type", "audio/mpegurl")
+                    self.end_headers()
+                    self.wfile.write(playlist.encode("utf-8"))
+                else:
+                    self.send_error(404, "No channels available")
+            elif self.path.endswith(".json"):
+                if sxm.current_metadata:
+                    self.send_response(200)
+                    self.send_header("Content-Type", "text/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps(sxm.current_metadata).encode("utf-8"))
+                else:
+                    self.send_error(404, "No channels available")
+            elif self.path.endswith(".png"):
+                if sxm.current_metadata:
+                    with open("play.png", "rb") as f:
+                        content = f.read()
+                    self.send_response(200)
+                    self.send_header("Content-Type", "image/png")
+                    self.end_headers()
+                    self.wfile.write(content)
+                else:
+                    self.send_error(404, "No channels available")
+            elif self.path.endswith('.m3u8'):
                 data = sxm.get_playlist(self.path.rsplit('/', 1)[1][:-5])
                 if data:
                     # Remove any AES key lines
@@ -486,11 +485,12 @@ def make_sirius_handler(sxm):
                 data = sxm.get_segment(self.path[1:])
                 if data:
                     # Decrypt and prepend ID3v2 metadata
-                    data = decrypt_and_inject_id3_plain(
+                    data = sxm.decrypt_and_inject_id3_plain(
                         data,
                         self.HLS_AES_KEY,
                         sxm.current_artist,
-                        sxm.current_title
+                        sxm.current_title,
+
                     )
                     self.send_response(200)
                     self.send_header('Content-Type', 'audio/aac')
@@ -498,13 +498,7 @@ def make_sirius_handler(sxm):
                     self.wfile.write(data)
                 else:
                     self.send_response(500)
-                    self.end_headers() 
-
-            elif self.path.endswith('/key/1'):
-                self.send_response(200)
-                self.send_header('Content-Type', 'text/plain')
-                self.end_headers()
-                self.wfile.write(self.HLS_AES_KEY)
+                    self.end_headers()
             else:
                 self.send_response(500)
                 self.end_headers()
