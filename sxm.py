@@ -285,7 +285,7 @@ class SiriusXM:
                 continue
             if line.endswith('.aac'):
                 duration = 10.0  # VLC usually ignores, optional
-                new_lines.append(f'#EXTINF:{duration} tvg-logo="{logo}" tvc-guide-art="{logo}",{self.current_artist} - {self.current_title}')
+                new_lines.append(f'#EXTINF:{duration},{self.current_artist} - {self.current_title}')
                 new_lines.append(f'{base_path}/{line}')
             else:
                 new_lines.append(line)
