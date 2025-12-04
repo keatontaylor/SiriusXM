@@ -26,6 +26,8 @@ class SiriusXM:
         self.current_channel = ""
         self.current_channel_id = ""
         self.current_channel_id_user = ""
+        self.current_art_url = ""
+        self.current_channel_art_url = ""
         self.current_metadata = None
         self.channels = None
 
@@ -187,6 +189,11 @@ class SiriusXM:
                 'station': station,
                 'playing': True,
             }
+            self.current_art_url = (
+                next((a["url"] for a in t.get("album", {}).get("creativeArts", []) 
+                    if a.get("size") == "MEDIUM"), 
+                    currentChannelArtwork)
+            )
             self.current_title = data_to_log["title"]
             self.current_artist = data_to_log["artist"]
             message = data['ModuleListResponse']['messages'][0]['message']
@@ -249,6 +256,7 @@ class SiriusXM:
         self.current_channel = channel_name
         self.current_channel_id = channel_id
         self.current_channel_id_user = channel_id_user
+        self.current_channel_art_url = logo
 
         if not guid or not channel_id:
             self.log('No channel for {}'.format(name))
@@ -463,6 +471,59 @@ class SiriusXM:
 
 
 
+
+    def decrypt_and_inject_id3_mutagen(
+            encrypted_data: bytes,
+            aes_key: bytes,
+            artist: str,
+            title: str,
+            channel_name: str,
+            channel_id: str,
+            album_art_url: str | None = None
+        ):
+        
+        # -------- AES-CBC DECRYPT SEGMENT --------
+        iv = encrypted_data[:16]
+        cipher = AES.new(aes_key, AES.MODE_CBC, iv)
+        decrypted = cipher.decrypt(encrypted_data[16:])
+
+        # Remove PKCS7 padding safely
+        pad = decrypted[-1]
+        if 1 <= pad <= 16:
+            decrypted = decrypted[:-pad]
+
+        # If existing ID3 exists — remove it
+        if decrypted.startswith(b"ID3"):
+            size = (decrypted[6] << 21) | (decrypted[7] << 14) | (decrypted[8] << 7) | decrypted[9]
+            decrypted = decrypted[10 + size:]
+
+        # -------- BUILD MUTAGEN ID3 TAG --------
+        id3 = ID3()
+
+        id3.add(TIT2(encoding=3, text=f"{channel_id} {channel_name} | {title}"))
+        id3.add(TPE1(encoding=3, text=artist))
+
+        if album_art_url:
+            try:
+                img = requests.get(album_art_url).content
+                mime = "image/jpeg" if album_art_url.lower().endswith(("jpg","jpeg")) else "image/png"
+                id3.add(APIC(
+                    encoding=3,
+                    mime=mime,
+                    type=3,
+                    desc="Cover",
+                    data=img
+                ))
+            except Exception as e:
+                print("⛔ Album art fetch failed:", e)
+
+        # Export ID3 as v2.3 — most compatible
+        buf = BytesIO()
+        id3.save(buf, v2_version=3)
+
+        return buf.getvalue() + decrypted  # prepend ID3 to AAC binary
+
+
 # ---------------------- HTTP Handler ------------------------
 def make_sirius_handler(sxm):
     class SiriusHandler(BaseHTTPRequestHandler):
@@ -578,6 +639,7 @@ def make_sirius_handler(sxm):
                         sxm.current_title,
                         sxm.current_channel,
                         sxm.current_channel_id_user,
+                        sxm.current_art_url,
                     )
                     self.send_response(200)
                     self.send_header('Content-Type', 'audio/aac')
