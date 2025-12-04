@@ -174,6 +174,7 @@ class SiriusXM:
 
         try:
             status = data['ModuleListResponse']['status']
+            musicdata = data['ModuleListResponse']['moduleList']['modules'][0]['moduleResponse']['liveChannelData']
             station = musicdata['markerLists'][0]['markers'][0]['episode']['longTitle']
 
             musicdata = data['ModuleListResponse']['moduleList']['modules'][0]['moduleResponse']['liveChannelData']
@@ -192,7 +193,6 @@ class SiriusXM:
         except (KeyError, IndexError):
             self.log('Error parsing json response for playlist')
             return None
-
 
         # login if session expired
         if message_code == 201 or message_code == 208:
