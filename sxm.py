@@ -473,6 +473,7 @@ class SiriusXM:
 
 
     def decrypt_and_inject_id3_mutagen(
+            self,
             encrypted_data: bytes,
             aes_key: bytes,
             artist: str,
