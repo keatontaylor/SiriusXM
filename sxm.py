@@ -445,6 +445,31 @@ def make_sirius_handler(sxm):
                 except FileNotFoundError:
                     self.send_error(404, "index.html not found")
                     return
+            elif self.path.startswith("/proxy/"):
+                raw_url = urllib.parse.unquote(self.path.replace("/proxy/", "", 1))  # strip prefix
+
+                # must only allow SiriusXM hosts (security)
+                allowed_hosts = [
+                    "albumart.siriusxm.com",
+                    "pri.art.prod.streaming.siriusxm.com",
+                    "art.siriusxm.com"
+                ]
+                parsed = urllib.parse.urlparse(raw_url)
+
+                if parsed.netloc not in allowed_hosts:
+                    self.send_error(403, "Domain not allowed")
+                    return
+
+                try:
+                    r = requests.get(raw_url, timeout=10)
+                    self.send_response(r.status_code)
+                    self.send_header("Content-Type", r.headers.get("Content-Type", "image/png"))
+                    self.send_header("Cache-Control", "public, max-age=86400")  # cache 1 day
+                    self.end_headers()
+                    self.wfile.write(r.content)
+                except Exception as e:
+                    self.send_error(500, f"Proxy request failed: {e}")
+                return
             elif self.path.endswith(".m3u"):
                 playlist = sxm.channels_to_m3u()
                 if playlist:
