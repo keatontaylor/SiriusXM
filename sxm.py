@@ -465,7 +465,7 @@ class SiriusXM:
         return tag + decrypted
 
 
-    def inject_id3_mutagen(self, aac_data, aes_key, artist, title, channel_name, channel_id, album_art_url=None):
+    def inject_id3_mutagen(self, data, aes_key, artist, title, channel_name, channel_id, album_art_url=None):
         """
         aac_data: raw AAC data (bytes)
         Returns: AAC data with prepended ID3v2.3 tag
