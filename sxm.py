@@ -172,26 +172,22 @@ class SiriusXM:
         if not data:
             return None
 
-        # get status
-        try:
-            status = data['ModuleListResponse']['status']
-            musicdata = data['ModuleListResponse']['moduleList']['modules'][0]['moduleResponse']['liveChannelData']
-            station = musicdata['markerLists'][0]['markers'][0]['episode']['longTitle']
-            self.current_metadata = musicdata['markerLists'][3]['markers'][-1]['cut']
 
-            data_to_log = {
-                'title': musicdata['markerLists'][3]['markers'][-1]['cut']['title'],
-                'artist': musicdata['markerLists'][3]['markers'][-1]['cut']['artists'][0]['name'],
-                'station': station,
-                'playing': True,
-            }
-            self.current_title = data_to_log["title"]
-            self.current_artist = data_to_log["artist"]
-            message = data['ModuleListResponse']['messages'][0]['message']
-            message_code = data['ModuleListResponse']['messages'][0]['code']
-        except (KeyError, IndexError):
-            self.log('Error parsing json response for playlist')
-            return None
+        status = data['ModuleListResponse']['status']
+        musicdata = data['ModuleListResponse']['moduleList']['modules'][0]['moduleResponse']['liveChannelData']
+        station = musicdata['markerLists'][0]['markers'][0]['episode']['longTitle']
+
+        data_to_log = {
+            'title': musicdata['markerLists'][-1]['markers'][-1]['cut']['title'],
+            'artist': musicdata['markerLists'][-1]['markers'][-1]['cut']['artists'][0]['name'],
+            'station': station,
+            'playing': True,
+        }
+        self.current_title = data_to_log["title"]
+        self.current_artist = data_to_log["artist"]
+        message = data['ModuleListResponse']['messages'][0]['message']
+        message_code = data['ModuleListResponse']['messages'][0]['code']
+
 
         # login if session expired
         if message_code == 201 or message_code == 208:
@@ -365,7 +361,7 @@ class SiriusXM:
             cnum = ch.get('siriusChannelNumber', '')
             name = ch.get('name', 'Unknown')
             # Construct a streaming URL — adjust this as needed
-            stream_url = f"/{cid}.m3u8"  
+            stream_url = f"http://10.0.1.212:8888/{cid}.m3u8"  
 
             m3u_lines.append(f"#EXTINF:-1,{cnum} {name}")
             m3u_lines.append(stream_url)
