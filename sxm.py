@@ -25,6 +25,7 @@ class SiriusXM:
         self.current_artist = ""
         self.current_channel = ""
         self.current_channel_id = ""
+        self.current_channel_id_user = ""
         self.current_metadata = None
         self.channels = None
 
@@ -244,9 +245,11 @@ class SiriusXM:
         return None
 
     def get_playlist(self, name, use_cache=True):
-        guid, channel_id, channel_name, logo = self.get_channel(name)
+        guid, channel_id, channel_name, logo, channel_id_user = self.get_channel(name)
         self.current_channel = channel_name
         self.current_channel_id = channel_id
+        self.current_channel_id_user = channel_id_user
+
         if not guid or not channel_id:
             self.log('No channel for {}'.format(name))
             return None
@@ -348,7 +351,7 @@ class SiriusXM:
         name = name.lower()
         for x in self.get_channels():
             if x.get('name', '').lower() == name or x.get('channelId', '').lower() == name or x.get('siriusChannelNumber') == name:
-                return (x['channelGuid'], x['channelId'], x['name'], x['images']['images'][3]['url'])
+                return (x['channelGuid'], x['channelId'], x['name'], x['images']['images'][3]['url'], x['siriusChannelNumber'])
         return (None, None)
 
 
@@ -406,7 +409,7 @@ class SiriusXM:
             header = frame_id.encode('ascii') + struct.pack('>I', size) + b'\x00\x00'
             return header + b'\x01' + encoded
 
-        frames = make_text_frame("TIT2", channel_name + " | " + title) + make_text_frame("TPE1", artist)
+        frames = make_text_frame("TIT2", channel_id + " " + channel_name + " | " + title) + make_text_frame("TPE1", artist)
 
         # --- Build ID3 header ---
         size = len(frames)
@@ -525,6 +528,7 @@ def make_sirius_handler(sxm):
                         sxm.current_artist,
                         sxm.current_title,
                         sxm.current_channel,
+                        sxm.current_channel_id_user,
 
                     )
                     self.send_response(200)
