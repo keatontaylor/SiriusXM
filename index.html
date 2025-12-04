@@ -178,7 +178,9 @@ async function loadChannels(){
         const name=lines[i].split(",")[1]?.trim();
         const url=lines[i+1]?.trim();
         const logoMatch=lines[i].match(/tvg-logo="([^"]+)"/);
-        const logo=logoMatch?logoMatch[1]:currentChannelArtwork;
+        const logo = logoMatch 
+              ? `/proxy/${encodeURIComponent(logoMatch[1])}` 
+              : currentChannelArtwork;
         if(url) channels.push({name,url,logo});
       }
     }
@@ -202,7 +204,7 @@ async function loadChannels(){
 
 // Load channel
 function loadChannel(ch){
-  currentChannelArtwork="/proxy/" + ch.logo;
+  currentChannelArtwork=ch.logo;
   player.src=ch.url;
   player.play().catch(()=>{
     if(clickListener) document.removeEventListener("click",clickListener);
