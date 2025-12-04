@@ -383,7 +383,7 @@ class SiriusXM:
             m3u_lines.append(stream_url)
         return "\n".join(m3u_lines)
 
-    def decrypt_and_inject_id3_plain(self, data, aes_key, artist, title, channel_name, album_art_url=None):
+    def decrypt_and_inject_id3_plain(self, data, aes_key, artist, title, channel_name, channel_id, album_art_url=None):
 
         # --- Decrypt AES-CBC ---
         iv = data[:16]
@@ -529,7 +529,6 @@ def make_sirius_handler(sxm):
                         sxm.current_title,
                         sxm.current_channel,
                         sxm.current_channel_id_user,
-
                     )
                     self.send_response(200)
                     self.send_header('Content-Type', 'audio/aac')
