@@ -240,7 +240,7 @@ class SiriusXM:
         return None
 
     def get_playlist(self, name, use_cache=True):
-        guid, channel_id, channel_name = self.get_channel(name)
+        guid, channel_id, channel_name, logo = self.get_channel(name)
         self.current_channel = channel_name
         self.current_channel_id = channel_id
         if not guid or not channel_id:
@@ -344,7 +344,7 @@ class SiriusXM:
         name = name.lower()
         for x in self.get_channels():
             if x.get('name', '').lower() == name or x.get('channelId', '').lower() == name or x.get('siriusChannelNumber') == name:
-                return (x['channelGuid'], x['channelId'], x['name'])
+                return (x['channelGuid'], x['channelId'], x['name'], x['images']['images'][3]['url'])
         return (None, None)
 
 
@@ -356,18 +356,26 @@ class SiriusXM:
         ))
         
         m3u_lines = ["#EXTM3U"]
-
         for ch in channels:
             cid = ch.get('channelId', '')
             cnum = ch.get('siriusChannelNumber', '')
             name = ch.get('name', 'Unknown')
-            # Construct a streaming URL — adjust this as needed
-            stream_url = f"/{cid}.m3u8"  
+            stream_url = f"/{cid}.m3u8"
 
-            m3u_lines.append(f"#EXTINF:-1,{cnum} {name}")
+            # Safe fetch — some channels may not have artwork or arrays may be short
+            logo = (
+                ch.get("images", {})
+                .get("images", [{}]*4)[3]  # ensures index safety
+                .get("url", "")
+            )
+
+            # M3U metadata with channel art
+            m3u_lines.append(
+                f'#EXTINF:-1 tvg-id="{cid}" tvg-logo="{logo}",{cnum} {name}'
+            )
             m3u_lines.append(stream_url)
-
         return "\n".join(m3u_lines)
+
     def decrypt_and_inject_id3_plain(self, data, aes_key, artist, title, album_art_url=None):
 
         # --- Decrypt AES-CBC ---

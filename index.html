@@ -73,6 +73,7 @@ const title = document.getElementById("title");
 
 let channels = [];
 const DEFAULT_ARTWORK = "play.png";
+let currentChannelArtwork = DEFAULT_ARTWORK;
 
 // Update Media Session metadata and UI
 function updateMetadata(track) {
@@ -105,7 +106,7 @@ async function updateCurrentSong() {
     const albumTitle = track.album?.title || "";
 
     // Pick MEDIUM artwork if available
-    const artworkUrl = track.album?.creativeArts?.find(a => a.size === "MEDIUM")?.url || DEFAULT_ARTWORK;
+    const artworkUrl = track.album?.creativeArts?.find(a => a.size === "MEDIUM")?.url || currentChannelArtwork;
 
     // Update on-page UI
     title.innerHTML = `${titleText}<br>${artistText}`;
@@ -139,9 +140,14 @@ async function loadChannels() {
     channels = [];
     for (let i = 0; i < lines.length; i++) {
       if (lines[i].startsWith("#EXTINF:")) {
-        const name = lines[i].split(",")[1].trim();
-        const url = lines[i+1]?.trim();
-        if (url) channels.push({ name, url });
+          const name = lines[i].split(",")[1].trim();
+          const url = lines[i+1]?.trim();
+
+          // Extract logo from EXTINF
+          const logoMatch = lines[i].match(/tvg-logo="([^"]+)"/);
+          const logo = logoMatch ? logoMatch[1] : DEFAULT_ARTWORK;
+
+          if (url) channels.push({ name, url, logo });
       }
     }
 
@@ -154,7 +160,7 @@ async function loadChannels() {
     });
 
     // Auto-load first channel
-    if (channels.length) loadChannel(channels[0].url, channels[0].name);
+    if (channels.length) loadChannel(channels[0].url, channels[0].name, channels[0].logo);
 
   } catch (err) {
     console.error("Failed to load channels:", err);
@@ -164,11 +170,12 @@ async function loadChannels() {
 // Handle channel change
 select.addEventListener("change", () => {
   const selected = channels.find(ch => ch.url === select.value);
-  if (selected) loadChannel(selected.url, selected.name);
+  if (selected) loadChannel(selected.url, selected.name, selected.logo);
 });
 
 // Load channel into video player
-function loadChannel(url, name) {
+function loadChannel(url, name, logo) {
+  currentChannelArtwork = logo;
   player.src = url;
   player.play().catch(() => {
     // Autoplay blocked — wait for user gesture
@@ -186,7 +193,7 @@ function loadChannel(url, name) {
     title: name,
     artist: "",
     album: "",
-    artwork: DEFAULT_ARTWORK
+    artwork: logo
   });
 }
 
