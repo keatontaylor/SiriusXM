@@ -365,7 +365,7 @@ class SiriusXM:
             cnum = ch.get('siriusChannelNumber', '')
             name = ch.get('name', 'Unknown')
             # Construct a streaming URL — adjust this as needed
-            stream_url = f"http://10.0.1.212:8888/{cid}.m3u8"  
+            stream_url = f"/{cid}.m3u8"  
 
             m3u_lines.append(f"#EXTINF:-1,{cnum} {name}")
             m3u_lines.append(stream_url)
