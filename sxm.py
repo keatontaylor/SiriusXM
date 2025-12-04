@@ -632,7 +632,7 @@ def make_sirius_handler(sxm):
                 data = sxm.get_segment(self.path[1:])
                 if data:
                     # Decrypt and prepend ID3v2 metadata
-                    data = sxm.decrypt_and_inject_id3_plain(
+                    data = sxm.decrypt_and_inject_id3_mutagen(
                         data,
                         self.HLS_AES_KEY,
                         sxm.current_artist,
