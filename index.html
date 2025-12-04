@@ -9,199 +9,219 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background: #111;
     color: #fff;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 30px;
+    margin: 0;
+    overflow-x: hidden;
   }
 
-  #now-playing {
-    text-align: center;
-    margin-bottom: 20px;
-    max-width: 350px;
-  }
-
-  #artwork {
-    width: 250px;
-    height: 250px;
-    border-radius: 12px;
-    object-fit: cover;
-    box-shadow: 0 0 15px rgba(0,0,0,0.6);
-    margin-bottom: 15px;
-  }
-
-  #title {
-    font-size: 1.4rem;
+  #openChannelsBtn {
+    background: #222;               /* dark like the channel cards */
+    color: #fff;                    /* white text */
+    padding: 12px 18px;
+    font-size: 1.1rem;
     font-weight: 600;
-    margin-bottom: 10px;
+    border-radius: 10px;            /* match card rounding */
+    cursor: pointer;
+    margin: 20px auto;
+    display: block;
+    border: 1px solid #444;         /* subtle border for depth */
+    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease;
   }
 
-  select {
-    margin-bottom: 20px;
-    padding: 8px 12px;
-    font-size: 1rem;
-    border-radius: 6px;
-    border: none;
-    outline: none;
+  #openChannelsBtn:hover {
+    background: #333;               /* slightly lighter on hover */
+    transform: scale(1.03);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
   }
 
-  /* Small video for native controls only */
-  #player {
-    width: 300px;      /* enough for native controls */
-    height: 40px;
-    object-fit: contain;
-    background: transparent;
+  #openChannelsBtn:active {
+    transform: scale(0.97);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
   }
+
+  /* Channel drawer */
+  #channelDrawer {
+    position: fixed;
+    top: 0;
+    left: 0;       /* start at 0 */
+    transform: translateX(-100%); /* hidden fully offscreen */
+    width: 350px;
+    height: 100vh;
+    background:#1a1a1a;
+    box-shadow: 4px 0 20px rgba(0,0,0,0.5);
+    padding:20px;
+    overflow-y:auto;
+    transition: transform .35s ease;
+    z-index:9999;
+  }
+
+  #channelDrawer.open {
+    transform: translateX(0); /* slide fully in */
+  }
+  #closeDrawer {
+    background:#333;
+    padding:6px 10px;
+    font-size:.9rem;
+    border-radius:4px;
+    cursor:pointer;
+    float:right;
+    margin-bottom:10px;
+  }
+
+  /* Channel grid */
+  #channelGrid {
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px,1fr));
+    gap:14px;
+    padding-top:35px;
+  }
+
+  .channel-card {
+    background:#222;
+    border-radius:10px;
+    padding:10px;
+    text-align:center;
+    cursor:pointer;
+    transition:transform .2s ease, box-shadow .2s ease;
+  }
+  .channel-card:hover {
+    transform:scale(1.05);
+    box-shadow:0 0 12px rgba(255,255,255,0.2);
+  }
+  .channel-card img {
+    width:85px;height:85px;
+    border-radius:6px;
+    object-fit:cover;
+    margin-bottom:6px;
+  }
+  .channel-name { font-size:.85rem;margin-top:4px; }
+
+  /* Now playing */
+  #now-playing {
+    text-align:center;
+    margin-top:30px;
+  }
+  #artwork {
+    width:250px;height:250px;
+    border-radius:12px;
+    object-fit:cover;
+    box-shadow:0 0 15px rgba(0,0,0,.6);
+    margin-bottom:12px;
+  }
+  #titleEl {
+    font-size:1.4rem;font-weight:600;margin-bottom:10px;
+  }
+
+  #player { width:300px;height:40px;margin-top:10px; }
 </style>
 </head>
 <body>
 
-<h2>Channel Selector</h2>
-<select id="channelSelect"></select>
+<button id="openChannelsBtn">📡 Browse Channels</button>
+
+<div id="channelDrawer">
+  <div id="closeDrawer">Close ✕</div>
+  <h2>Channel List</h2>
+  <div id="channelGrid"></div>
+</div>
 
 <div id="now-playing">
-  <img id="artwork" src="play.png" alt="Album Art">
-  <div id="title">Loading…</div>
+  <img id="artwork" src="play.png">
+  <div id="titleEl">Loading…</div>
   <audio id="player" controls playsinline></audio>
 </div>
 
 <script>
-const player = document.getElementById("player");
-const select = document.getElementById("channelSelect");
-const artwork = document.getElementById("artwork");
-const title = document.getElementById("title");
+const DEFAULT_ARTWORK="play.png";
+const player=document.getElementById("player");
+const artwork=document.getElementById("artwork");
+const titleEl=document.getElementById("titleEl");
+const drawer=document.getElementById("channelDrawer");
 
-let channels = [];
-const DEFAULT_ARTWORK = "play.png";
-let currentChannelArtwork = DEFAULT_ARTWORK;
+let channels=[];
+let currentChannelArtwork=DEFAULT_ARTWORK;
+let clickListener=null;
 
-// Update Media Session metadata and UI
-function updateMetadata(track) {
-  title.textContent = track.title || "";
-  artwork.src = track.artwork || DEFAULT_ARTWORK;
+// Drawer open/close
+document.getElementById("openChannelsBtn").onclick=()=>drawer.classList.add("open");
+document.getElementById("closeDrawer").onclick=()=>drawer.classList.remove("open");
 
-  if ('mediaSession' in navigator) {
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: track.title || "",
-      artist: track.artist || "",
-      album: track.album || "",
-      artwork: [
-        { src: track.artwork || DEFAULT_ARTWORK, sizes: "96x96", type: "image/jpeg" },
-        { src: track.artwork || DEFAULT_ARTWORK, sizes: "192x192", type: "image/jpeg" },
-        { src: track.artwork || DEFAULT_ARTWORK, sizes: "512x512", type: "image/jpeg" }
-      ]
-    });
-  }
-}
-
-// Load M3U from backend and populate channel selector
-
-async function updateCurrentSong() {
-  try {
-    const res = await fetch("/current_song.json"); // endpoint returning JSON
-    const track = await res.json();
-
-    const titleText = track.title || "";
-    const artistText = track.artists?.[0]?.name || "";
-    const albumTitle = track.album?.title || "";
-
-    // Pick MEDIUM artwork if available
-    const artworkUrl = track.album?.creativeArts?.find(a => a.size === "MEDIUM")?.url || currentChannelArtwork;
-
-    // Update on-page UI
-    title.innerHTML = `${titleText}<br>${artistText}`;
-    artwork.src = artworkUrl;
-
-    // Update Media Session
-    if ('mediaSession' in navigator) {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: titleText,
-        artist: artistText,
-        album: albumTitle,
-        artwork: [
-          { src: artworkUrl, sizes: "96x96", type: "image/jpeg" },
-          { src: artworkUrl, sizes: "192x192", type: "image/jpeg" },
-          { src: artworkUrl, sizes: "512x512", type: "image/jpeg" }
-        ]
+// Fetch current song
+async function updateCurrentSong(){
+  try{
+    const res=await fetch("/current_song.json");
+    const t=await res.json();
+    const ttl=t.title||"";
+    const art=t.artists?.[0]?.name||"";
+    const alb=t.album?.title||"";
+    const artURL=t.album?.creativeArts?.find(a=>a.size==="MEDIUM")?.url || currentChannelArtwork;
+    titleEl.innerHTML=`${ttl}<br>${art}`;
+    artwork.src=artURL;
+    if('mediaSession'in navigator)
+      navigator.mediaSession.metadata=new MediaMetadata({
+        title:ttl,
+        artist:art,
+        album:alb,
+        artwork:[{src:artURL}]
       });
-    }
-
-  } catch (err) {
-    console.error("Failed to update current song:", err);
-  }
+  }catch(e){ console.error(e); }
 }
 
-async function loadChannels() {
-  try {
-    const res = await fetch("/channels.m3u"); // backend endpoint serving M3U
-    const text = await res.text();
-    const lines = text.split(/\r?\n/);
-
-    channels = [];
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].startsWith("#EXTINF:")) {
-          const name = lines[i].split(",")[1].trim();
-          const url = lines[i+1]?.trim();
-
-          // Extract logo from EXTINF
-          const logoMatch = lines[i].match(/tvg-logo="([^"]+)"/);
-          const logo = logoMatch ? logoMatch[1] : DEFAULT_ARTWORK;
-
-          if (url) channels.push({ name, url, logo });
+// Load channels
+async function loadChannels(){
+  try{
+    const res=await fetch("/channels.m3u");
+    const lines=(await res.text()).split(/\r?\n/);
+    channels=[];
+    for(let i=0;i<lines.length;i++){
+      if(lines[i].startsWith("#EXTINF:")){
+        const name=lines[i].split(",")[1]?.trim();
+        const url=lines[i+1]?.trim();
+        const logoMatch=lines[i].match(/tvg-logo="([^"]+)"/);
+        const logo=logoMatch?logoMatch[1]:DEFAULT_ARTWORK;
+        if(url) channels.push({name,url,logo});
       }
     }
 
-    // Populate <select>
-    channels.forEach(ch => {
-      const opt = document.createElement("option");
-      opt.value = ch.url;
-      opt.textContent = ch.name;
-      select.appendChild(opt);
+    const grid=document.getElementById("channelGrid");
+    grid.innerHTML="";
+    channels.forEach(ch=>{
+      const card=document.createElement("div");
+      card.className="channel-card";
+      card.innerHTML=`<img src="${ch.logo}"><div class="channel-name">${ch.name}</div>`;
+      card.onclick=()=>{
+        loadChannel(ch);
+        drawer.classList.remove("open");
+      };
+      grid.appendChild(card);
     });
 
-    // Auto-load first channel
-    if (channels.length) loadChannel(channels[0].url, channels[0].name, channels[0].logo);
-
-  } catch (err) {
-    console.error("Failed to load channels:", err);
-  }
+    if(channels.length) loadChannel(channels[0]);
+  }catch(e){ console.error("Failed to load channels:",e); }
 }
 
-// Handle channel change
-select.addEventListener("change", () => {
-  const selected = channels.find(ch => ch.url === select.value);
-  if (selected) loadChannel(selected.url, selected.name, selected.logo);
-});
-
-// Load channel into video player
-function loadChannel(url, name, logo) {
-  currentChannelArtwork = logo;
-  player.src = url;
-  player.play().catch(() => {
-    // Autoplay blocked — wait for user gesture
-    const start = () => { player.play(); removeListeners(); };
-    const removeListeners = () => {
-      document.removeEventListener("click", start);
-      document.removeEventListener("touchstart", start);
-    };
-    document.addEventListener("click", start);
-    document.addEventListener("touchstart", start);
+// Load channel
+function loadChannel(ch){
+  currentChannelArtwork=ch.logo;
+  player.src=ch.url;
+  player.play().catch(()=>{
+    if(clickListener) document.removeEventListener("click",clickListener);
+    clickListener=()=>{player.play(); document.removeEventListener("click",clickListener);};
+    document.addEventListener("click",clickListener);
+    document.addEventListener("touchstart",clickListener);
   });
-
-  // Update UI + Media Session
-  updateMetadata({
-    title: name,
-    artist: "",
-    album: "",
-    artwork: "/proxy/" + logo
-  });
+  updateMetadata({title:ch.name, art:ch.logo});
 }
 
-// Initialize on DOM ready
-document.addEventListener("DOMContentLoaded", loadChannels);
-setInterval(updateCurrentSong, 1000);
-updateCurrentSong(); // initial call
+// Update metadata UI
+function updateMetadata({title,t,art}){
+  titleEl.textContent=t || title;
+  artwork.src=art || DEFAULT_ARTWORK;
+}
+
+loadChannels();
+setInterval(updateCurrentSong,1000);
+updateCurrentSong();
 </script>
-
 </body>
 </html>
