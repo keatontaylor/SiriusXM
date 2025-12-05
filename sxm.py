@@ -29,7 +29,7 @@ class SiriusXM:
         self.current_metadata = None
         self.channels = None
 
-    def log(x):
+    def log(self, x):
         print('{} <SiriusXM>: {}'.format(datetime.datetime.now().strftime('%d.%b %Y %H:%M:%S'), x))
 
     def is_logged_in(self):
