@@ -14,105 +14,56 @@
   }
 
   #openChannelsBtn {
-    background: #222;               /* dark like the channel cards */
-    color: #fff;                    /* white text */
-    padding: 12px 18px;
-    font-size: 1.1rem;
-    font-weight: 600;
-    border-radius: 10px;            /* match card rounding */
-    cursor: pointer;
-    margin: 20px auto;
-    display: block;
-    border: 1px solid #444;         /* subtle border for depth */
-    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
-    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease;
-  }
-
-  #openChannelsBtn:hover {
-    background: #333;               /* slightly lighter on hover */
-    transform: scale(1.03);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
-  }
-
-  #openChannelsBtn:active {
-    transform: scale(0.97);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
-  }
-
-  /* Channel drawer */
-  #channelDrawer {
-    position: fixed;
-    top: 0;
-    left: 0;       /* start at 0 */
-    transform: translateX(-100%); /* hidden fully offscreen */
-    width: 350px;
-    height: 100vh;
-    background:#1a1a1a;
-    box-shadow: 4px 0 20px rgba(0,0,0,0.5);
-    padding:20px;
-    overflow-y:auto;
-    transition: transform .35s ease;
-    z-index:9999;
-  }
-
-  #channelDrawer.open {
-    transform: translateX(0); /* slide fully in */
-  }
-  #closeDrawer {
-    background:#333;
-    padding:6px 10px;
-    font-size:.9rem;
-    border-radius:4px;
+    background:#222;
+    color:#fff;
+    padding:12px 18px;
+    font-size:1.1rem;
+    font-weight:600;
+    border-radius:10px;
     cursor:pointer;
-    float:right;
-    margin-bottom:10px;
+    margin:20px auto;
+    display:block;
+    border:1px solid #444;
+    box-shadow:0 2px 8px rgba(0,0,0,0.5);
+    transition:transform .15s ease, box-shadow .15s ease, background .2s ease;
   }
+  #openChannelsBtn:hover {background:#333;transform:scale(1.03);box-shadow:0 4px 12px rgba(0,0,0,0.6);}
+  #openChannelsBtn:active {transform:scale(.97);box-shadow:0 2px 6px rgba(0,0,0,0.5);}
+
+  /* Drawer */
+  #channelDrawer {
+    position:fixed;top:0;left:0;
+    transform:translateX(-100%);
+    width:350px;height:100vh;background:#1a1a1a;
+    box-shadow:4px 0 20px rgba(0,0,0,0.5);
+    padding:20px;overflow-y:auto;transition:transform .35s ease;z-index:9999;
+  }
+  #channelDrawer.open {transform:translateX(0);}
+  #closeDrawer {background:#333;padding:6px 10px;font-size:.9rem;border-radius:4px;cursor:pointer;float:right;margin-bottom:10px;}
 
   /* Channel grid */
   #channelGrid {
     display:grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px,1fr));
-    gap:14px;
-    padding-top:35px;
+    grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
+    gap:14px;padding-top:35px;
   }
-
   .channel-card {
-    background:#222;
-    border-radius:10px;
-    padding:10px;
-    text-align:center;
-    cursor:pointer;
-    transition:transform .2s ease, box-shadow .2s ease;
+    background:#222;border-radius:10px;padding:10px;text-align:center;
+    cursor:pointer;transition:transform .2s ease, box-shadow .2s ease;
   }
-  .channel-card:hover {
-    transform:scale(1.05);
-    box-shadow:0 0 12px rgba(255,255,255,0.2);
-  }
+  .channel-card:hover {transform:scale(1.05);box-shadow:0 0 12px rgba(255,255,255,0.2);}
   .channel-card img {
-    width:85px;height:85px;
-    border-radius:6px;
-    object-fit:cover;
-    margin-bottom:6px;
+    width:85px;height:85px;border-radius:6px;object-fit:cover;margin-bottom:6px;
+    opacity:0;transition:opacity .4s ease; /* fade-in image when loaded */
   }
-  .channel-name { font-size:.85rem;margin-top:4px; }
+  .channel-name {font-size:.85rem;margin-top:4px;}
 
-  /* Now playing */
-  #now-playing {
-    text-align:center;
-    margin-top:30px;
-  }
-  #artwork {
-    width:250px;height:250px;
-    border-radius:12px;
-    object-fit:cover;
-    box-shadow:0 0 15px rgba(0,0,0,.6);
-    margin-bottom:12px;
-  }
-  #titleEl {
-    font-size:1.4rem;font-weight:600;margin-bottom:10px;
-  }
-
-  #player { width:300px;height:40px;margin-top:10px; }
+  /* Now Playing */
+  #now-playing{text-align:center;margin-top:30px;}
+  #artwork{width:250px;height:250px;border-radius:12px;object-fit:cover;
+           box-shadow:0 0 15px rgba(0,0,0,.6);margin-bottom:12px;}
+  #titleEl{font-size:1.4rem;font-weight:600;margin-bottom:10px;}
+  #player{width:300px;height:40px;margin-top:10px;}
 </style>
 </head>
 <body>
@@ -159,12 +110,9 @@ async function updateCurrentSong(){
     artwork.src=artURL;
     if('mediaSession'in navigator)
       navigator.mediaSession.metadata=new MediaMetadata({
-        title:ttl,
-        artist:art,
-        album:alb,
-        artwork:[{src:artURL}]
+        title:ttl,artist:art,album:alb,artwork:[{src:artURL}]
       });
-  }catch(e){ console.error(e); }
+  }catch(e){console.error(e);}
 }
 
 // Load channels
@@ -177,21 +125,15 @@ async function loadChannels(){
       if(lines[i].startsWith("#EXTINF:")){
         const name=lines[i].split(",")[1]?.trim();
         const url=lines[i+1]?.trim();
-        const logoMatch=lines[i].match(/tvg-logo="([^"]+)"/);
-        let logo;
-        if (logoMatch) {
-          const originalLogo = logoMatch[1];
 
-          // If site is HTTPS but logo is HTTP → must proxy to avoid mixed-content blocking
-          if (location.protocol === "https:" && originalLogo.startsWith("http://")) {
-            logo = `/proxy/${encodeURIComponent(originalLogo)}`;
-          } else {
-            // If site is HTTP, load directly (NO proxy)
-            // If logo is already HTTPS, load directly
-            logo = originalLogo;
-          }
-        } else {
-          logo = currentChannelArtwork;
+        // Extract logo (and avoid mixed-content issues)
+        const logoMatch=lines[i].match(/tvg-logo="([^"]+)"/);
+        let logo=currentChannelArtwork;
+        if(logoMatch){
+          const original=logoMatch[1];
+          logo=(location.protocol==="https:" && original.startsWith("http://"))
+               ? `/proxy/${encodeURIComponent(original)}`
+               : original;
         }
         if(url) channels.push({name,url,logo});
       }
@@ -199,19 +141,42 @@ async function loadChannels(){
 
     const grid=document.getElementById("channelGrid");
     grid.innerHTML="";
+
     channels.forEach(ch=>{
       const card=document.createElement("div");
       card.className="channel-card";
-      card.innerHTML=`<img src="${ch.logo}"><div class="channel-name">${ch.name}</div>`;
-      card.onclick=()=>{
-        loadChannel(ch);
-        drawer.classList.remove("open");
-      };
+
+      // ⛔ do not load image yet — store it for lazy load
+      card.innerHTML=`
+        <img data-logo="${ch.logo}" alt="logo">
+        <div class="channel-name">${ch.name}</div>
+      `;
+      card.onclick=()=>{loadChannel(ch);drawer.classList.remove("open");};
       grid.appendChild(card);
     });
 
+    setupLazyLoading(); // <-- lazy-load observed here
+
     if(channels.length) loadChannel(channels[0]);
-  }catch(e){ console.error("Failed to load channels:",e); }
+  }catch(e){console.error("Failed to load channels:",e);}
+}
+
+// Lazy-load channel art only when card is visible
+function setupLazyLoading(){
+  const imgs=document.querySelectorAll('#channelGrid img[data-logo]');
+  const observer=new IntersectionObserver(entries=>{
+    entries.forEach(entry=>{
+      if(entry.isIntersecting){
+        const img=entry.target;
+        img.src=img.dataset.logo;
+        img.onload=()=>img.style.opacity=1; // fade-in
+        img.removeAttribute("data-logo");
+        observer.unobserve(img);
+      }
+    });
+  },{root:drawer,rootMargin:"120px"}); // preload before scrolled fully in view
+
+  imgs.forEach(img=>observer.observe(img));
 }
 
 // Load channel
@@ -220,17 +185,17 @@ function loadChannel(ch){
   player.src=ch.url;
   player.play().catch(()=>{
     if(clickListener) document.removeEventListener("click",clickListener);
-    clickListener=()=>{player.play(); document.removeEventListener("click",clickListener);};
+    clickListener=()=>{player.play();document.removeEventListener("click",clickListener);};
     document.addEventListener("click",clickListener);
     document.addEventListener("touchstart",clickListener);
   });
-  updateMetadata({title:ch.name, art:ch.logo});
+  updateMetadata({title:ch.name,art:ch.logo});
 }
 
 // Update metadata UI
 function updateMetadata({title,t,art}){
-  titleEl.textContent=t || title;
-  artwork.src=art || DEFAULT_ARTWORK;
+  titleEl.textContent=t||title;
+  artwork.src=art||DEFAULT_ARTWORK;
 }
 
 loadChannels();
