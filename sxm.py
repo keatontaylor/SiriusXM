@@ -268,6 +268,7 @@ class SiriusXM:
 
         url = self.get_playlist_url(guid, channel_id, use_cache)
         if not url:
+            self.log("did not return a playlist url, something went horribly wrong")
             return None
 
         params = {
