@@ -171,6 +171,17 @@ class SiriusXM:
         }
         data = self.get('tune/now-playing-live', params)
         if not data:
+            if max_attempts > 0:
+                self.log('Session expired, logging in and authenticating')
+                if self.authenticate():
+                    self.log('Successfully authenticated')
+                    return self.get_playlist_url(guid, channel_id, use_cache, max_attempts - 1)
+                else:
+                    self.log('Failed to authenticate')
+                    return None
+            else:
+                self.log('Reached max attempts for playlist')
+                return None
             self.log("something went horibly wrong getting tune/now-playing-live")
             return None
 
