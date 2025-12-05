@@ -178,9 +178,21 @@ async function loadChannels(){
         const name=lines[i].split(",")[1]?.trim();
         const url=lines[i+1]?.trim();
         const logoMatch=lines[i].match(/tvg-logo="([^"]+)"/);
-        const logo = logoMatch 
-              ? logoMatch[1]
-              : currentChannelArtwork;
+        let logo;
+        if (logoMatch) {
+          const originalLogo = logoMatch[1];
+
+          // If site is HTTPS but logo is HTTP → must proxy to avoid mixed-content blocking
+          if (location.protocol === "https:" && originalLogo.startsWith("http://")) {
+            logo = `/proxy/${encodeURIComponent(originalLogo)}`;
+          } else {
+            // If site is HTTP, load directly (NO proxy)
+            // If logo is already HTTPS, load directly
+            logo = originalLogo;
+          }
+        } else {
+          logo = currentChannelArtwork;
+        }
         if(url) channels.push({name,url,logo});
       }
     }
