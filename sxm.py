@@ -536,17 +536,18 @@ def make_sirius_handler(sxm):
                     self.end_headers()
                     self.wfile.write(json.dumps(sxm.current_metadata).encode("utf-8"))
                 else:
-                    self.send_error(404, "No channels available")
-            elif self.path.endswith(".png"):
-                if sxm.current_metadata:
-                    with open("play.png", "rb") as f:
-                        content = f.read()
                     self.send_response(200)
-                    self.send_header("Content-Type", "image/png")
+                    self.send_header("Content-Type", "text/json")
                     self.end_headers()
-                    self.wfile.write(content)
-                else:
-                    self.send_error(404, "No channels available")
+                    self.wfile.write(json.dumps([]).encode("utf-8"))
+            elif self.path.endswith(".png"):
+                with open("play.png", "rb") as f:
+                    content = f.read()
+                self.send_response(200)
+                self.send_header("Content-Type", "image/png")
+                self.end_headers()
+                self.wfile.write(content)
+
             elif self.path.endswith('.m3u8'):
                 data = sxm.get_playlist(self.path.rsplit('/', 1)[1][:-5])
                 if data:
