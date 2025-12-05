@@ -29,7 +29,6 @@ class SiriusXM:
         self.current_metadata = None
         self.channels = None
 
-    @staticmethod
     def log(x):
         print('{} <SiriusXM>: {}'.format(datetime.datetime.now().strftime('%d.%b %Y %H:%M:%S'), x))
 
@@ -171,36 +170,10 @@ class SiriusXM:
         }
         data = self.get('tune/now-playing-live', params)
         if not data:
-            if max_attempts > 0:
-                self.log('Session expired, logging in and authenticating')
-                if self.authenticate():
-                    self.log('Successfully authenticated')
-                    return self.get_playlist_url(guid, channel_id, use_cache, max_attempts - 1)
-                else:
-                    self.log('Failed to authenticate')
-                    return None
-            else:
-                self.log('Reached max attempts for playlist')
-                return None
-            self.log("something went horibly wrong getting tune/now-playing-live")
             return None
 
         try:
             status = data['ModuleListResponse']['status']
-            musicdata = data['ModuleListResponse']['moduleList']['modules'][0]['moduleResponse']['liveChannelData']
-            station = musicdata['markerLists'][0]['markers'][0]['episode']['longTitle']
-
-            musicdata = data['ModuleListResponse']['moduleList']['modules'][0]['moduleResponse']['liveChannelData']
-            self.current_metadata = musicdata['markerLists'][-1]['markers'][-1]['cut']
-
-            data_to_log = {
-                'title': musicdata['markerLists'][-1]['markers'][-1]['cut']['title'],
-                'artist': musicdata['markerLists'][-1]['markers'][-1]['cut']['artists'][0]['name'],
-                'station': station,
-                'playing': True,
-            }
-            self.current_title = data_to_log["title"]
-            self.current_artist = data_to_log["artist"]
             message = data['ModuleListResponse']['messages'][0]['message']
             message_code = data['ModuleListResponse']['messages'][0]['code']
         except (KeyError, IndexError):
@@ -227,6 +200,21 @@ class SiriusXM:
         # get m3u8 url
         try:
             playlists = data['ModuleListResponse']['moduleList']['modules'][0]['moduleResponse']['liveChannelData']['hlsAudioInfos']
+            musicdata = data['ModuleListResponse']['moduleList']['modules'][0]['moduleResponse']['liveChannelData']
+            station = musicdata['markerLists'][0]['markers'][0]['episode']['longTitle']
+
+            musicdata = data['ModuleListResponse']['moduleList']['modules'][0]['moduleResponse']['liveChannelData']
+            self.current_metadata = musicdata['markerLists'][-1]['markers'][-1]['cut']
+
+            data_to_log = {
+                'title': musicdata['markerLists'][-1]['markers'][-1]['cut']['title'],
+                'artist': musicdata['markerLists'][-1]['markers'][-1]['cut']['artists'][0]['name'],
+                'station': station,
+                'playing': True,
+            }
+            self.log(data_to_log)
+            self.current_title = data_to_log["title"]
+            self.current_artist = data_to_log["artist"]
         except (KeyError, IndexError):
             self.log('Error parsing json response for playlist')
             return None
