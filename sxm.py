@@ -204,19 +204,12 @@ class SiriusXM:
             playlists = data['ModuleListResponse']['moduleList']['modules'][0]['moduleResponse']['liveChannelData']['hlsAudioInfos']
             musicdata = data['ModuleListResponse']['moduleList']['modules'][0]['moduleResponse']['liveChannelData']
             station = musicdata['markerLists'][0]['markers'][0]['episode']['longTitle']
-
+            self.log(station)
             musicdata = data['ModuleListResponse']['moduleList']['modules'][0]['moduleResponse']['liveChannelData']
             self.current_metadata = musicdata['markerLists'][-1]['markers'][-1]['cut']
+            self.current_title = musicdata['markerLists'][-1]['markers'][-1]['cut']['title']
+            self.current_artist = musicdata['markerLists'][-1]['markers'][-1]['cut']['artists'][0]['name']
 
-            data_to_log = {
-                'title': musicdata['markerLists'][-1]['markers'][-1]['cut']['title'],
-                'artist': musicdata['markerLists'][-1]['markers'][-1]['cut']['artists'][0]['name'],
-                'station': station,
-                'playing': True,
-            }
-            self.log(data_to_log)
-            self.current_title = data_to_log["title"]
-            self.current_artist = data_to_log["artist"]
         except (KeyError, IndexError):
             self.log('Error parsing json response for playlist')
             return None
