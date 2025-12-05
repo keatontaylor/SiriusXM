@@ -204,7 +204,7 @@ class SiriusXM:
             playlists = data['ModuleListResponse']['moduleList']['modules'][0]['moduleResponse']['liveChannelData']['hlsAudioInfos']
             musicdata = data['ModuleListResponse']['moduleList']['modules'][0]['moduleResponse']['liveChannelData']
             station = musicdata['markerLists'][0]['markers'][0]['episode']['longTitle']
-            print(musicdata['markerLists'][0]['markers'][0]['episode'])
+            print(musicdata['markerLists'][0]['markers'][0])
             musicdata = data['ModuleListResponse']['moduleList']['modules'][0]['moduleResponse']['liveChannelData']
             self.current_metadata = musicdata['markerLists'][-1]['markers'][-1]['cut']
             self.current_title = musicdata['markerLists'][-1]['markers'][-1]['cut']['title']
