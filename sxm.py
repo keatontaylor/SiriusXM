@@ -8,6 +8,8 @@ import sys
 import os
 import struct
 from http.server import BaseHTTPRequestHandler, HTTPServer
+import ffmpeg
+import tempfile
 from Crypto.Cipher import AES
 
 class SiriusXM:
@@ -171,7 +173,17 @@ class SiriusXM:
         }
         data = self.get('tune/now-playing-live', params)
         if not data:
-            return None
+            if max_attempts > 0:
+                self.log('Session expired, logging in and authenticating')
+                if self.authenticate():
+                    self.log('Successfully authenticated')
+                    return self.get_playlist_url(guid, channel_id, use_cache, max_attempts - 1)
+                else:
+                    self.log('Failed to authenticate')
+                    return None
+            else:
+                self.log('Reached max attempts for playlist')
+                return None
 
         try:
             status = data['ModuleListResponse']['status']
@@ -423,43 +435,78 @@ class SiriusXM:
         pretty_xml = minidom.parseString(xml_str).toprettyxml(indent="  ")
         return pretty_xml
 
-    def decrypt_and_inject_id3_plain(self, data, aes_key, artist, title, channel_name, channel_id, album_art_url=None):
-
+    def decrypt_and_inject_fmp4_segment(self, data, aes_key, artist, title,
+                                        channel_name, channel_id, album_art_url=None):
+        """
+        Decrypt a single AES-CBC AAC segment and wrap it in a fragmented MP4 (fMP4)
+        segment with metadata and optional cover art, ready for HLS streaming.
+        Returns bytes of the fMP4 segment.
+        """
         # --- Decrypt AES-CBC ---
         iv = data[:16]
         ciphertext = data[16:]
         cipher = AES.new(aes_key, AES.MODE_CBC, iv)
         decrypted = cipher.decrypt(ciphertext)
 
-        # Remove AES padding
+        # Remove PKCS#7 padding
         pad_len = decrypted[-1]
         if 0 < pad_len <= 16:
             decrypted = decrypted[:-pad_len]
 
-        # Strip existing ID3
+        # Strip existing ID3 header if present
         if decrypted[:3] == b'ID3':
             size_bytes = decrypted[6:10]
-            size = (size_bytes[0]<<21)|(size_bytes[1]<<14)|(size_bytes[2]<<7)|size_bytes[3]
-            decrypted = decrypted[size+10:]
+            size = (size_bytes[0] << 21) | (size_bytes[1] << 14) | (size_bytes[2] << 7) | size_bytes[3]
+            decrypted = decrypted[size + 10:]
 
-        # --- Build ID3v2.3 frames ---
-        def make_text_frame(frame_id, text):
-            encoded = text.encode('utf-16')  # UTF-16 with BOM
-            size = len(encoded) + 1
-            header = frame_id.encode('ascii') + struct.pack('>I', size) + b'\x00\x00'
-            return header + b'\x01' + encoded
+        full_title = f"{channel_id} {channel_name} | {title}" if channel_id or channel_name else title
 
-        frames = make_text_frame("TIT2", channel_id + " " + channel_name + " | " + title) + make_text_frame("TPE1", artist)
+        # --- Create temp directory for processing ---
+        with tempfile.TemporaryDirectory() as tmpdir:
+            aac_path = os.path.join(tmpdir, "segment.aac")
+            with open(aac_path, "wb") as f:
+                f.write(decrypted)
 
-        # --- Build ID3 header ---
-        size = len(frames)
-        def syncsafe(i):
-            return bytes([(i >> 21) & 0x7F, (i >> 14) & 0x7F, (i >> 7) & 0x7F, i & 0x7F])
-        header = b"ID3" + b"\x03\x00" + b"\x00" + syncsafe(size)
+            audio_stream = ffmpeg.input(aac_path, format='aac')
 
-        tag = header + frames
+            if album_art_url:
+                # Fetch cover art
+                resp = requests.get(album_art_url)
+                resp.raise_for_status()
+                cover_path = os.path.join(tmpdir, "cover.jpg")
+                with open(cover_path, "wb") as f:
+                    f.write(resp.content)
+                cover_stream = ffmpeg.input(cover_path)
 
-        return tag + decrypted
+                # fMP4 output with cover art
+                output_path = os.path.join(tmpdir, "segment.m4s")
+                ffmpeg.output(audio_stream, cover_stream, output_path, f='mp4').global_args(
+                    '-movflags', 'frag_keyframe+empty_moov+default_base_moof',
+                    '-c:a', 'aac',
+                    '-c:v', 'mjpeg',
+                    '-map', '0:a',
+                    '-map', '1:v',
+                    '-metadata:s:a:0', f'title={full_title}',
+                    '-metadata:s:a:0', f'artist={artist}',
+                    '-metadata:s:v:0', 'title=Cover',
+                    '-metadata:s:v:0', 'comment=Front Cover'
+                ).run(overwrite_output=True)
+
+            else:
+                # fMP4 output audio-only
+                output_path = os.path.join(tmpdir, "segment.m4s")
+                ffmpeg.output(audio_stream, output_path, f='mp4').global_args(
+                    '-movflags', 'frag_keyframe+empty_moov+default_base_moof',
+                    '-c:a', 'aac',
+                    '-metadata:s:a:0', f'title={full_title}',
+                    '-metadata:s:a:0', f'artist={artist}'
+                ).run(overwrite_output=True)
+
+            # --- Read bytes to return ---
+            with open(output_path, "rb") as f:
+                segment_bytes = f.read()
+
+        return segment_bytes
 
 
 # ---------------------- HTTP Handler ------------------------
@@ -570,16 +617,17 @@ def make_sirius_handler(sxm):
                 data = sxm.get_segment(self.path[1:])
                 if data:
                     # Decrypt and prepend ID3v2 metadata
-                    data = sxm.decrypt_and_inject_id3_plain(
+                    data = sxm.decrypt_and_inject_fmp4_segment(
                         data,
                         self.HLS_AES_KEY,
                         sxm.current_artist,
                         sxm.current_title,
                         sxm.current_channel,
                         sxm.current_channel_id_user,
+                        "http://albumart.siriusxm.com/albumart/0030/WBHITS_NDCA-000028805-001_m.jpg",
                     )
                     self.send_response(200)
-                    self.send_header('Content-Type', 'audio/aac')
+                    self.send_header('Content-Type', 'audio/m4s')
                     self.end_headers()
                     self.wfile.write(data)
                 else:
