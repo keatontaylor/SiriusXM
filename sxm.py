@@ -29,9 +29,6 @@ class SiriusXM:
         self.current_metadata = None
         self.channels = None
 
-    def log(self, x):
-        print('{} <SiriusXM>: {}'.format(datetime.datetime.now().strftime('%d.%b %Y %H:%M:%S'), x))
-
     def is_logged_in(self):
         return 'SXMDATA' in self.session.cookies
 
@@ -40,34 +37,34 @@ class SiriusXM:
 
     def get(self, method, params, authenticate=True):
         if authenticate and not self.is_session_authenticated() and not self.authenticate():
-            self.log('Unable to authenticate')
+            print('Unable to authenticate')
             return None
 
         res = self.session.get(self.REST_FORMAT.format(method), params=params)
         if res.status_code != 200:
-            self.log('Received status code {} for method \'{}\''.format(res.status_code, method))
+            print('Received status code {} for method \'{}\''.format(res.status_code, method))
             return None
 
         try:
             return res.json()
         except ValueError:
-            self.log('Error decoding json for method \'{}\''.format(method))
+            print('Error decoding json for method \'{}\''.format(method))
             return None
 
     def post(self, method, postdata, authenticate=True):
         if authenticate and not self.is_session_authenticated() and not self.authenticate():
-            self.log('Unable to authenticate')
+            print('Unable to authenticate')
             return None
 
         res = self.session.post(self.REST_FORMAT.format(method), data=json.dumps(postdata))
         if res.status_code != 200:
-            self.log('Received status code {} for method \'{}\''.format(res.status_code, method))
+            print('Received status code {} for method \'{}\''.format(res.status_code, method))
             return None
 
         try:
             return res.json()
         except ValueError:
-            self.log('Error decoding json for method \'{}\''.format(method))
+            print('Error decoding json for method \'{}\''.format(method))
             return None
 
     def login(self):
@@ -103,12 +100,12 @@ class SiriusXM:
         try:
             return data['ModuleListResponse']['status'] == 1 and self.is_logged_in()
         except KeyError:
-            self.log('Error decoding json response for login')
+            print('Error decoding json response for login')
             return False
 
     def authenticate(self):
         if not self.is_logged_in() and not self.login():
-            self.log('Unable to authenticate because login failed')
+            print('Unable to authenticate because login failed')
             return False
 
         postdata = {
@@ -139,7 +136,7 @@ class SiriusXM:
         try:
             return data['ModuleListResponse']['status'] == 1 and self.is_session_authenticated()
         except KeyError:
-            self.log('Error parsing json response for authentication')
+            print('Error parsing json response for authentication')
             return False
 
     def get_sxmak_token(self):
@@ -177,24 +174,24 @@ class SiriusXM:
             message = data['ModuleListResponse']['messages'][0]['message']
             message_code = data['ModuleListResponse']['messages'][0]['code']
         except (KeyError, IndexError):
-            self.log('Error parsing json response for playlist')
+            print('Error parsing json response for playlist')
             return None
 
         # login if session expired
         if message_code == 201 or message_code == 208:
             if max_attempts > 0:
-                self.log('Session expired, logging in and authenticating')
+                print('Session expired, logging in and authenticating')
                 if self.authenticate():
-                    self.log('Successfully authenticated')
+                    print('Successfully authenticated')
                     return self.get_playlist_url(guid, channel_id, use_cache, max_attempts - 1)
                 else:
-                    self.log('Failed to authenticate')
+                    print('Failed to authenticate')
                     return None
             else:
-                self.log('Reached max attempts for playlist')
+                print('Reached max attempts for playlist')
                 return None
         elif message_code != 100:
-            self.log('Received error {} {}'.format(message_code, message))
+            print('Received error {} {}'.format(message_code, message))
             return None
 
         # get m3u8 url
@@ -212,11 +209,11 @@ class SiriusXM:
                 'station': station,
                 'playing': True,
             }
-            self.log(data_to_log)
+            print(data_to_log)
             self.current_title = data_to_log["title"]
             self.current_artist = data_to_log["artist"]
         except (KeyError, IndexError):
-            self.log('Error parsing json response for playlist')
+            print('Error parsing json response for playlist')
             return None
         for playlist_info in playlists:
             if playlist_info['size'] == 'LARGE':
@@ -235,7 +232,7 @@ class SiriusXM:
         res = self.session.get(url, params=params)
 
         if res.status_code != 200:
-            self.log('Received status code {} on playlist variant retrieval'.format(res.status_code))
+            print('Received status code {} on playlist variant retrieval'.format(res.status_code))
             return None
         
         for x in res.text.split('\n'):
@@ -251,12 +248,12 @@ class SiriusXM:
         self.current_channel_id_user = channel_id_user
 
         if not guid or not channel_id:
-            self.log('No channel for {}'.format(name))
+            print('No channel for {}'.format(name))
             return None
 
         url = self.get_playlist_url(guid, channel_id, use_cache)
         if not url:
-            self.log("did not return a playlist url, something went horribly wrong")
+            print("did not return a playlist url, something went horribly wrong")
             return None
 
         params = {
@@ -267,11 +264,11 @@ class SiriusXM:
         res = self.session.get(url, params=params)
 
         if res.status_code == 403:
-            self.log('Received status code 403 on playlist, renewing session')
+            print('Received status code 403 on playlist, renewing session')
             return self.get_playlist(name, False)
 
         if res.status_code != 200:
-            self.log('Received status code {} on playlist variant'.format(res.status_code))
+            print('Received status code {} on playlist variant'.format(res.status_code))
             return None
 
         base_url = url.rsplit('/', 1)[0]
@@ -307,15 +304,15 @@ class SiriusXM:
 
         if res.status_code == 403:
             if max_attempts > 0:
-                self.log('Received status code 403 on segment, renewing session')
+                print('Received status code 403 on segment, renewing session')
                 self.get_playlist(path.split('/', 2)[1], False)
                 return self.get_segment(path, max_attempts - 1)
             else:
-                self.log('Received status code 403 on segment, max attempts exceeded')
+                print('Received status code 403 on segment, max attempts exceeded')
                 return None
 
         if res.status_code != 200:
-            self.log('Received status code {} on segment'.format(res.status_code))
+            print('Received status code {} on segment'.format(res.status_code))
             return None
 
         return res.content
@@ -338,13 +335,13 @@ class SiriusXM:
             }
             data = self.post('get', postdata)
             if not data:
-                self.log('Unable to get channel list')
+                print('Unable to get channel list')
                 return []
 
             try:
                 self.channels = data['ModuleListResponse']['moduleList']['modules'][0]['moduleResponse']['contentData']['channelListing']['channels']
             except (KeyError, IndexError):
-                self.log('Error parsing json response for channels')
+                print('Error parsing json response for channels')
                 return []
         return self.channels
 
