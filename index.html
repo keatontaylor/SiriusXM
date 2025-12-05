@@ -170,19 +170,27 @@ async function updateCurrentSong(){
 // Load channels
 async function loadChannels(){
   try{
-    const res=await fetch("/channels.m3u");
-    const lines=(await res.text()).split(/\r?\n/);
-    channels=[];
-    for(let i=0;i<lines.length;i++){
-      if(lines[i].startsWith("#EXTINF:")){
-        const name=lines[i].split(",")[1]?.trim();
-        const url=lines[i+1]?.trim();
-        const logoMatch=lines[i].match(/tvg-logo="([^"]+)"/);
-        const logo = logoMatch 
-              ? `/proxy/${encodeURIComponent(logoMatch[1])}` 
-              : currentChannelArtwork;
-        if(url) channels.push({name,url,logo});
+    const isHttps = location.protocol === 'https:'; // true if page is https
+
+    for (let i = 0; i < lines.length; i++) {
+      const url = lines[i+1]?.trim();
+      const logoMatch = lines[i].match(/tvg-logo="([^"]+)"/);
+
+      let logoUrl;
+      if (logoMatch) {
+        const original = logoMatch[1];
+
+        // Only proxy if we are on HTTPS and the logo is HTTP
+        if (isHttps && original.startsWith('http://')) {
+          logoUrl = `/proxy/${encodeURIComponent(original)}`;
+        } else {
+          logoUrl = original; // Safe to load directly
+        }
+      } else {
+        logoUrl = currentChannelArtwork;
       }
+
+      if (url) channels.push({ name, url, logo: logoUrl });
     }
 
     const grid=document.getElementById("channelGrid");
