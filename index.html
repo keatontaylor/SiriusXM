@@ -128,7 +128,7 @@ async function updateCurrentSong(){
     // Show channel + song info
     const chName = channels.find(c=>c.channelId===currentChannelId)?.name || "";
     channelInfo.textContent = `${chName}`;
-    songInfo.textContent = `${ttl}<br>${art}`;
+    songInfo.textContent = `${ttl} - ${art}`;
 
     artwork.src = artURL;
     if('mediaSession' in navigator)
@@ -174,7 +174,7 @@ async function loadChannels(){
           currentChannelId = ch.channelId;
           currentChannelArtwork = ch.logo;
           artwork.src = ch.logo;
-          channelInfo.textContent = `${ch.channelId} - ${ch.name}`;
+          channelInfo.textContent = `${ch.name}`;
           songInfo.textContent = "";
         } else {
           loadChannel(ch);
