@@ -606,7 +606,7 @@ def make_sirius_handler(sxm):
                     self.end_headers()
             except (BrokenPipeError, ConnectionResetError) as e:
                 # Client disconnected — safe to ignore
-                self.log("A client disconnected mid stream, supressing BrokenPipe Error")
+                sxm.log("A client disconnected mid stream, supressing BrokenPipe Error")
     return SiriusHandler
 
 # ---------------------- Main ------------------------
