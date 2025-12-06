@@ -262,6 +262,10 @@ async function pollForcedChannel(){
         loadChannel(f);      
         updateCurrentSong();  
       }
+      else{
+        loadChannel(channels[0]);
+        updateCurrentSong();
+      }
     }
   }catch(e){}
 }
