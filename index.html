@@ -290,7 +290,7 @@ document.getElementById("closeSettings").onclick = () => settingsDrawer.classLis
 // --- Server Mode ---
 document.getElementById("serverModeToggle").onclick = () => {
   serverMode = !serverMode;
-  document.getElementById("serverModeToggle").textContent = `🛑 Server Mode: ${serverMode?"ON":"OFF"}`;
+  document.getElementById("serverModeToggle").textContent = `Server Mode: ${serverMode?"ON":"OFF"}`;
   if(serverMode){
     honorServer = true;
     document.getElementById("honorServerToggle").classList.add("hidden");
@@ -314,7 +314,7 @@ const honorBtn = document.getElementById("honorServerToggle");
 honorBtn.onclick = () => {
   if(serverMode) return; 
   honorServer = !honorServer;
-  honorBtn.textContent = `🎛 Honor Server Channel: ${honorServer?"ON":"OFF"}`;
+  honorBtn.textContent = `Honor Server Channel: ${honorServer?"ON":"OFF"}`;
 };
 
 // --- Channel functions ---
