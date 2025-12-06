@@ -84,6 +84,7 @@ document.getElementById("serverModeToggle").onclick = () => {
   if (serverMode) {
     // Force honor server ON
     honorServer = true;
+    honorBtn.textContent = `🎛 Honor Server Channel: ${honorServer?"ON":"OFF"}`;
     honorBtn.classList.add("hidden");
 
     // Abort current loading and remove audio source
