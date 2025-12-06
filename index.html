@@ -213,7 +213,7 @@ async function loadChannels(){
     });
 
     setupLazyLoading();
-    if(channels.length && !serverMode) loadChannel(channels[0]);
+    if(channels.length && !serverMode && !honorServer)  loadChannel(channels[0]);
 
   }catch(e){console.error(e);}
 }
