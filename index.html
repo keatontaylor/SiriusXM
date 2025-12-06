@@ -5,205 +5,183 @@
 <title>Liquid Glass Modern HLS Player</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  /* --- Variables --- */
-  :root {
-    --bg-gradient: linear-gradient(135deg,#0b0b0b,#111);
-    --glass-bg: rgba(30,30,30,0.5);
-    --glass-blur: 25px;
-    --accent: #0ff;
-    --accent-hover: #0cc;
-    --text-primary: #fff;
-    --text-secondary: #ccc;
-    --shadow: rgba(0,0,0,0.5);
-    --radius: 24px;
-  }
+:root {
+  --bg-gradient: linear-gradient(135deg,#0b0b0b,#111);
+  --glass-bg: rgba(30,30,30,0.5);
+  --glass-blur: 25px;
+  --accent: #0ff;
+  --accent-hover: #0cc;
+  --text-primary: #fff;
+  --text-secondary: #ccc;
+  --shadow: rgba(0,0,0,0.5);
+  --radius: 24px;
+}
 
-  * { box-sizing: border-box; margin:0; padding:0; }
-  body {
-    font-family: 'SF Pro', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: var(--bg-gradient);
-    color: var(--text-primary);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-height: 100vh;
-    padding: 20px;
-  }
+* { box-sizing: border-box; margin:0; padding:0; }
+body {
+  font-family: 'SF Pro', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg-gradient);
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
 
-  /* --- Top Controls Panel --- */
-  #controlsPanel {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 12px;
-    margin-bottom: 30px;
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    border-radius: var(--radius);
-    padding: 16px 20px;
-    border: 1px solid rgba(255,255,255,0.08);
-    box-shadow: 0 12px 36px var(--shadow);
-  }
+/* --- Top Controls Panel --- */
+#controlsPanel {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 30px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 12px 36px var(--shadow);
+}
 
-  button {
-    background: var(--glass-bg);
-    color: var(--text-primary);
-    font-size: 1rem;
-    font-weight: 600;
-    border-radius: var(--radius);
-    cursor: pointer;
-    padding: 12px 20px;
-    border: 1px solid rgba(255,255,255,0.1);
-    box-shadow: 0 8px 24px var(--shadow);
-    transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
-    backdrop-filter: blur(var(--glass-blur));
-  }
+button {
+  background: var(--glass-bg);
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: var(--radius);
+  cursor: pointer;
+  padding: 12px 20px;
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 8px 24px var(--shadow);
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+  backdrop-filter: blur(var(--glass-blur));
+}
 
-  button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 14px 36px var(--shadow);
-    background: rgba(40,40,40,0.6);
-    border-color: rgba(255,255,255,0.2);
-  }
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 36px var(--shadow);
+  background: rgba(40,40,40,0.6);
+  border-color: rgba(255,255,255,0.2);
+}
+button:active { transform: translateY(0); }
 
-  button:active { transform: translateY(0); }
+/* --- Channel Drawer --- */
+#channelDrawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  transform: translateX(100%);
+  width: 400px;
+  height: 100vh;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  box-shadow: -6px 0 24px var(--shadow);
+  padding: 25px;
+  overflow-y: auto;
+  transition: transform 0.35s ease;
+  z-index: 9999;
+  border-top-left-radius: var(--radius);
+  border-bottom-left-radius: var(--radius);
+  border: 1px solid rgba(255,255,255,0.08);
+}
 
-  /* --- Channel Drawer --- */
-  #channelDrawer {
-    position: fixed;
-    top: 0;
-    right: 0;
-    transform: translateX(100%);
-    width: 400px;
-    height: 100vh;
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    box-shadow: -6px 0 24px var(--shadow);
-    padding: 25px;
-    overflow-y: auto;
-    transition: transform 0.35s ease;
-    z-index: 9999;
-    border-top-left-radius: var(--radius);
-    border-bottom-left-radius: var(--radius);
-    border: 1px solid rgba(255,255,255,0.08);
-  }
+#channelDrawer.open { transform: translateX(0); }
+#closeDrawer {
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  float: right;
+}
+#channelDrawer h2 {
+  margin-bottom: 20px;
+  font-weight: 700;
+  font-size: 1.4rem;
+  color: var(--accent);
+  text-align: center;
+}
 
-  #channelDrawer.open { transform: translateX(0); }
-  #closeDrawer {
-    background: transparent;
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-    cursor: pointer;
-    float: right;
-  }
-  #channelDrawer h2 {
-    margin-bottom: 20px;
-    font-weight: 700;
-    font-size: 1.4rem;
-    color: var(--accent);
-    text-align: center;
-  }
+/* --- Channel Grid --- */
+#channelGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill,minmax(120px,1fr));
+  gap: 16px;
+}
 
-  /* --- Channel Grid --- */
-  #channelGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill,minmax(120px,1fr));
-    gap: 16px;
-  }
+.channel-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  border-radius: var(--radius);
+  padding: 12px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+.channel-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 16px 40px var(--shadow);
+  border-color: rgba(255,255,255,0.15);
+}
+.channel-card img {
+  width: 90px;
+  height: 90px;
+  border-radius: var(--radius);
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.4s ease, transform 0.3s ease;
+}
+.channel-card:hover img { transform: scale(1.05); }
+.channel-name { font-size: 0.9rem; font-weight: 500; text-align: center; color: var(--text-primary); }
 
-  .channel-card {
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    border-radius: var(--radius);
-    padding: 12px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
-    border: 1px solid rgba(255,255,255,0.05);
-  }
-  .channel-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 16px 40px var(--shadow);
-    border-color: rgba(255,255,255,0.15);
-  }
+.cng-btn {
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--bg-gradient);
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.cng-btn:hover { background: var(--accent-hover); }
 
-  .channel-card img {
-    width: 90px;
-    height: 90px;
-    border-radius: var(--radius);
-    object-fit: cover;
-    opacity: 0;
-    transition: opacity 0.4s ease, transform 0.3s ease;
-  }
-  .channel-card:hover img { transform: scale(1.05); }
+/* --- Now Playing Panel --- */
+#now-playing {
+  margin-top: 30px;
+  text-align: center;
+  max-width: 450px;
+  width: 100%;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  border-radius: var(--radius);
+  padding: 25px;
+  box-shadow: 0 16px 48px var(--shadow);
+  border: 1px solid rgba(255,255,255,0.05);
+}
 
-  .channel-name { font-size: 0.9rem; font-weight: 500; text-align: center; color: var(--text-primary); }
+#artwork {
+  width: 320px;
+  height: 320px;
+  border-radius: var(--radius);
+  object-fit: cover;
+  box-shadow: 0 12px 36px var(--shadow);
+  margin-bottom: 16px;
+  transition: transform 0.3s ease;
+}
+#artwork:hover { transform: scale(1.02); }
 
-  .cng-btn {
-    padding: 6px 12px;
-    font-size: 0.75rem;
-    border-radius: var(--radius);
-    background: var(--accent);
-    color: var(--bg);
-    font-weight: 600;
-    border: none;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-  .cng-btn:hover { background: var(--accent-hover); }
+#channelInfo { font-size: 1.7rem; font-weight: 700; margin-bottom: 10px; }
+#songInfo { font-size: 1.1rem; color: var(--text-secondary); line-height: 1.4; }
+#player { width: 100%; margin-top: 16px; border-radius: var(--radius); outline: none; }
 
-  /* --- Now Playing Panel --- */
-  #now-playing {
-    margin-top: 30px;
-    text-align: center;
-    max-width: 450px;
-    width: 100%;
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    border-radius: var(--radius);
-    padding: 25px;
-    box-shadow: 0 16px 48px var(--shadow);
-    border: 1px solid rgba(255,255,255,0.05);
-  }
-
-  #artwork {
-    width: 320px;
-    height: 320px;
-    border-radius: var(--radius);
-    object-fit: cover;
-    box-shadow: 0 12px 36px var(--shadow);
-    margin-bottom: 16px;
-    transition: transform 0.3s ease;
-  }
-  #artwork:hover { transform: scale(1.02); }
-
-  #channelInfo {
-    font-size: 1.7rem;
-    font-weight: 700;
-    margin-bottom: 10px;
-  }
-  #songInfo {
-    font-size: 1.1rem;
-    color: var(--text-secondary);
-    line-height: 1.4;
-  }
-
-  #player {
-    width: 100%;
-    margin-top: 16px;
-    border-radius: var(--radius);
-    outline: none;
-  }
-
-  .hidden { display: none !important; }
+.hidden { display: none !important; }
 
 </style>
 </head>
@@ -231,8 +209,8 @@
   <audio id="player" controls playsinline></audio>
 </div>
 
-
 <script>
+// --- All existing JS logic preserved --- //
 const DEFAULT_ARTWORK="play.png";
 const player=document.getElementById("player");
 const artwork=document.getElementById("artwork");
@@ -245,7 +223,7 @@ let currentChannelArtwork=DEFAULT_ARTWORK;
 let currentChannelId=null;
 
 let serverMode = false;
-let honorServer = true; // default ON
+let honorServer = true; 
 const honorBtn = document.getElementById("honorServerToggle");
 
 // Drawer
@@ -262,11 +240,9 @@ document.getElementById("closeDrawer").onclick = () => drawer.classList.remove("
 document.getElementById("serverModeToggle").onclick = () => {
   serverMode = !serverMode;
   document.getElementById("serverModeToggle").textContent = `🛑 Server Mode: ${serverMode?"ON":"OFF"}`;
-
   if(serverMode){
     honorServer = true;
     honorBtn.classList.add("hidden");
-
     player.pause();
     player.classList.add("hidden");
     document.querySelectorAll(".cng-btn").forEach(b=>b.classList.remove("hidden"));
@@ -282,7 +258,7 @@ document.getElementById("serverModeToggle").onclick = () => {
   }
 };
 
-// Honor Server toggle (only when serverMode OFF)
+// Honor Server toggle
 honorBtn.onclick = () => {
   if(serverMode) return; 
   honorServer = !honorServer;
@@ -306,25 +282,21 @@ async function updateCurrentSong(){
     const art = t.artists?.[0]?.name||"";
     const alb = t.album?.title||"";
     const artURL = t.album?.creativeArts?.find(a=>a.size==="MEDIUM")?.url || currentChannelArtwork;
-
-    // Show channel + song info
     const chName = channels.find(c=>c.channelId===currentChannelId)?.name || "";
     channelInfo.textContent = `${chName}`;
     songInfo.innerHTML = `${ttl}<br>${art}`;
-
     artwork.src = artURL;
     if('mediaSession' in navigator)
       navigator.mediaSession.metadata = new MediaMetadata({title:ttl, artist:art, album:alb, artwork:[{src:artURL}]});
   }catch(e){console.error(e);}
 }
-  
+
 // Load channels
 async function loadChannels(){
   try{
     const res = await fetch("/channels.m3u");
     const lines = (await res.text()).split(/\r?\n/);
     channels = [];
-
     for(let i=0;i<lines.length;i++){
       if(lines[i].startsWith("#EXTINF:")){
         const displayName = lines[i].split(",")[1]?.trim()||"Unknown";
@@ -344,12 +316,10 @@ async function loadChannels(){
 
     const grid=document.getElementById("channelGrid");
     grid.innerHTML="";
-
     channels.forEach(ch=>{
       const card = document.createElement("div");
       card.className="channel-card";
       card.innerHTML = `<img data-logo="${ch.logo}" alt="logo"><div class="channel-name">${ch.name}</div><button class="cng-btn ${serverMode?'':'hidden'}">Send to Web Players</button>`;
-
       card.addEventListener("click", ()=>{ 
         if(serverMode){
           sendChannelChange(ch.channelId);
@@ -358,12 +328,9 @@ async function loadChannels(){
           artwork.src = ch.logo;
           channelInfo.textContent = `${ch.name}`;
           songInfo.textContent = "";
-        } else {
-          loadChannel(ch);
-        }
+        } else loadChannel(ch);
         drawer.classList.remove("open"); 
       });
-
       card.querySelector(".cng-btn").addEventListener("click", e=>{
         e.stopPropagation();
         sendChannelChange(ch.channelId);
@@ -375,13 +342,10 @@ async function loadChannels(){
           songInfo.textContent = "";
         }
       });
-
       grid.appendChild(card);
     });
-
     setupLazyLoading();
     if(channels.length && !serverMode) loadChannel(channels[0]);
-
   }catch(e){console.error(e);}
 }
 
@@ -402,14 +366,12 @@ function setupLazyLoading(){
   imgs.forEach(img=>observer.observe(img));
 }
 
-// Load channel (respects server mode)
+// Load channel
 function loadChannel(ch){
   currentChannelArtwork = ch.logo;
   currentChannelId = ch.channelId;
-
   channelInfo.textContent = `${ch.name}`;
   songInfo.textContent = "";
-
   if(!serverMode){
     player.src = ch.url;
     player.play().catch(()=>{});
