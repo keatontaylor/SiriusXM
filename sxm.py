@@ -23,12 +23,7 @@ class SiriusXM:
         self.username = username
         self.password = password
         self.playlists = {}
-        self.current_title = ""
-        self.current_artist = ""
-        self.current_channel = ""
-        self.current_channel_id = ""
-        self.current_channel_id_user = ""
-        self.current_metadata = None
+        self.now_playing = {}
         self.channels = None
 
     def log(self, x):
@@ -203,11 +198,7 @@ class SiriusXM:
         try:
             playlists = data['ModuleListResponse']['moduleList']['modules'][0]['moduleResponse']['liveChannelData']['hlsAudioInfos']
             musicdata = data['ModuleListResponse']['moduleList']['modules'][0]['moduleResponse']['liveChannelData']
-            station = musicdata['markerLists'][0]['markers'][0]['episode']['longTitle']
             musicdata = data['ModuleListResponse']['moduleList']['modules'][0]['moduleResponse']['liveChannelData']
-            self.current_metadata = musicdata['markerLists'][-1]['markers'][-1]['cut']
-            self.current_title = musicdata['markerLists'][-1]['markers'][-1]['cut']['title']
-            self.current_artist = musicdata['markerLists'][-1]['markers'][-1]['cut']['artists'][0]['name']
 
         except (KeyError, IndexError):
             self.log('Error parsing json response for playlist')
@@ -216,6 +207,7 @@ class SiriusXM:
             if playlist_info['size'] == 'LARGE':
                 playlist_url = playlist_info['url'].replace('%Live_Primary_HLS%', self.LIVE_PRIMARY_HLS)
                 self.playlists[channel_id] = self.get_playlist_variant_url(playlist_url)
+                self.now_playing[channel_id] = musicdata['markerLists'][-1]['markers'][-1]['cut']
                 return self.playlists[channel_id]
 
         return None
@@ -240,9 +232,6 @@ class SiriusXM:
 
     def get_playlist(self, name, use_cache=True):
         guid, channel_id, channel_name, logo, channel_id_user = self.get_channel(name)
-        self.current_channel = channel_name
-        self.current_channel_id = channel_id
-        self.current_channel_id_user = channel_id_user
 
         if not guid or not channel_id:
             self.log('No channel for {}'.format(name))
@@ -280,7 +269,7 @@ class SiriusXM:
                 continue
             if line.endswith('.aac'):
                 duration = 10.0  # VLC usually ignores, optional
-                new_lines.append(f'#EXTINF:{duration},{self.current_artist} - {self.current_title}')
+                new_lines.append(f'#EXTINF:{duration},{self.now_playing[channel_id]['artists'][0]['name']} - {self.now_playing[channel_id]['title']}')
                 new_lines.append(f'{base_path}/{line}')
             else:
                 new_lines.append(line)
@@ -347,7 +336,7 @@ class SiriusXM:
         for x in self.get_channels():
             if x.get('name', '').lower() == name or x.get('channelId', '').lower() == name or x.get('siriusChannelNumber') == name:
                 return (x['channelGuid'], x['channelId'], x['name'], x['images']['images'][3]['url'], x['siriusChannelNumber'])
-        return (None, None)
+        return (None, None, None, None, None)
 
 
     def channels_to_m3u(self):
@@ -464,10 +453,16 @@ def make_sirius_handler(sxm):
 
         # Override log_message to append extra info
         def log_message(self, format, *args):
+            extra_info = f""
             if self.path.endswith('.m3u8'):
-                extra_info = f"[Current Channel: {sxm.current_channel, sxm.current_channel_id}]"
-            else:
-                extra_info = f"[Playing Now: {sxm.current_title, sxm.current_artist}]"  # Anything you want to append
+                guid, channel_id, channel_name, logo, channel_id_user = sxm.get_channel(self.path.rsplit('/', 1)[1][:-5])
+                extra_info = f"[Current Channel: {channel_id_user, channel_name, channel_id}]"
+            elif self.path.endswith('.aac'):
+                guid, channel_id, channel_name, logo, channel_id_user = sxm.get_channel(self.path[1:].split('/', 2)[1])
+                extra_info = f"[Playing Now: {sxm.now_playing[channel_id]['artists'][0]['name']} - {sxm.now_playing[channel_id]['title']}]"
+            elif self.path.endswith('.json'):
+                guid, channel_id, channel_name, logo, channel_id_user = sxm.get_channel(self.path.rsplit('/', 1)[1][:-5])
+                extra_info = f"[Playing Now: {sxm.now_playing[channel_id]['artists'][0]['name']} - {sxm.now_playing[channel_id]['title']}]"
             # Original log format is: "%s - - [%s] %s\n"
             super().log_message(format + " %s", *args, extra_info)
 
@@ -530,11 +525,12 @@ def make_sirius_handler(sxm):
                 else:
                     self.send_error(404, "No channels available")
             elif self.path.endswith(".json"):
-                if sxm.current_metadata:
+                guid, channel_id, channel_name, logo, channel_id_user = sxm.get_channel(self.path.rsplit('/', 1)[1][:-5])
+                if guid:
                     self.send_response(200)
                     self.send_header("Content-Type", "text/json")
                     self.end_headers()
-                    self.wfile.write(json.dumps(sxm.current_metadata).encode("utf-8"))
+                    self.wfile.write(json.dumps(sxm.now_playing[channel_id]).encode("utf-8"))
                 else:
                     self.send_response(200)
                     self.send_header("Content-Type", "text/json")
@@ -547,7 +543,6 @@ def make_sirius_handler(sxm):
                 self.send_header("Content-Type", "image/png")
                 self.end_headers()
                 self.wfile.write(content)
-
             elif self.path.endswith('.m3u8'):
                 data = sxm.get_playlist(self.path.rsplit('/', 1)[1][:-5])
                 if data:
@@ -564,15 +559,16 @@ def make_sirius_handler(sxm):
                     self.end_headers()
             elif self.path.endswith('.aac'):
                 data = sxm.get_segment(self.path[1:])
+                guid, channel_id, channel_name, logo, channel_id_user = sxm.get_channel(self.path[1:].split('/', 2)[1])
                 if data:
                     # Decrypt and prepend ID3v2 metadata
                     data = sxm.decrypt_and_inject_id3_plain(
                         data,
                         self.HLS_AES_KEY,
-                        sxm.current_artist,
-                        sxm.current_title,
-                        sxm.current_channel,
-                        sxm.current_channel_id_user,
+                        sxm.now_playing[channel_id]['artists'][0]['name'],
+                        sxm.now_playing[channel_id]['title'],
+                        channel_name,
+                        channel_id_user,
                     )
                     self.send_response(200)
                     self.send_header('Content-Type', 'audio/aac')
