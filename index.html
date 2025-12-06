@@ -167,7 +167,7 @@ async function updateCurrentSong(){
     // ----------------------------------------------------------------------
     if ('mediaSession' in navigator) {
       navigator.mediaSession.metadata = new MediaMetadata({
-        title: `${artist} — ${title}`,   // Looks best on TVs + lock screen
+        title: title,  // Looks best on TVs + lock screen
         artist: artist,
         album: `${chName} • Live Radio`, // Shows station name clearly on AirPlay
         artwork: artworkSet              // Multi-resolution → crisp AirPlay cards
