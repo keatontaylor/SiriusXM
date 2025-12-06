@@ -68,7 +68,7 @@ const honorBtn = document.getElementById("honorServerToggle");
 
 // Drawer
 document.getElementById("openChannelsBtn").onclick = () => {
-  if(serverMode || honorServer){
+  if(!serverMode && honorServer){
     alert("Cannot browse channels while server mode or honor server channels is ON");
     return;
   }
