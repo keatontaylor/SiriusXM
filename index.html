@@ -60,44 +60,58 @@
 
   /* --- Settings Drawer --- */
   #settingsDrawer {
-    position: fixed;
-    top: 0;
-    left: 0;
-    transform: translateX(-100%);
-    width: 280px;
-    height: 100vh;
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    box-shadow: 6px 0 24px var(--shadow);
-    padding: 25px;
-    overflow-y: auto;
-    transition: transform .35s ease;
-    z-index: 9999;
-    border-top-right-radius: var(--radius);
-    border-bottom-right-radius: var(--radius);
-    border: 1px solid rgba(255,255,255,0.08);
+      position: fixed;
+      top: 0;
+      left: 0;
+      transform: translateX(-100%);
+      width: 300px;
+      height: 100vh;
+      background: var(--glass-bg);
+      backdrop-filter: blur(var(--glass-blur));
+      -webkit-backdrop-filter: blur(var(--glass-blur));
+      box-shadow: 6px 0 24px var(--shadow);
+      padding: 25px;
+      overflow-y: auto;
+      transition: transform .35s ease;
+      z-index: 9999;
+      border-top-right-radius: var(--radius);
+      border-bottom-right-radius: var(--radius);
+      border: 1px solid rgba(255,255,255,0.08);
   }
+
   #settingsDrawer.open { transform: translateX(0); }
-  #closeSettings {
-    background: transparent;
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-    cursor: pointer;
-    float: right;
-    margin-bottom: 15px;
-  }
+
   #settingsDrawer h2 {
-    text-align: center;
-    font-weight: 700;
-    font-size: 1.4rem;
-    color: var(--accent);
-    margin-bottom: 20px;
+      margin-bottom: 20px;
+      font-weight: 700;
+      font-size: 1.4rem;
+      color: var(--accent);
+      text-align: center;
   }
+
   #settingsDrawer button {
-    width: 100%;
-    margin-bottom: 12px;
-    background: var(--glass-bg);
+      width: 100%;
+      margin-bottom: 12px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      padding: 12px;
+      border-radius: var(--radius);
+      border: 1px solid rgba(255,255,255,0.1);
+      background: var(--glass-bg);
+      color: var(--text-primary);
+      box-shadow: 0 8px 24px var(--shadow);
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+      backdrop-filter: blur(var(--glass-blur));
   }
+
+  #settingsDrawer button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 36px var(--shadow);
+      background: rgba(40,40,40,0.6);
+      border-color: rgba(255,255,255,0.2);
+  }
+
 
   /* --- Channel Drawer --- */
   #channelDrawer {
@@ -217,20 +231,20 @@
 <!-- Top Bar -->
 <div id="topBar">
   <button id="settingsBtn">⚙️</button>
-  <button id="openChannelsBtn">📡 Browse Channels</button>
+  <button id="openChannelsBtn">📡</button>
 </div>
 
-<!-- Settings Panel -->
+<!-- Settings Drawer -->
 <div id="settingsDrawer">
-  <div id="closeSettings">✕ Close</div>
+  <div id="closeSettings">Close</div>
   <h2>Settings</h2>
-  <button id="serverModeToggle">🛑 Server Mode: OFF</button>
-  <button id="honorServerToggle">🎛 Honor Server Channel: ON</button>
+  <button id="serverModeToggle" class="cng-btn">Server Mode: OFF</button>
+  <button id="honorServerToggle" class="cng-btn">Honor Server Channel: ON</button>
 </div>
 
 <!-- Channel Drawer -->
 <div id="channelDrawer">
-  <div id="closeDrawer">✕ Close</div>
+  <div id="closeDrawer">Close</div>
   <h2>Channel List</h2>
   <div id="channelGrid"></div>
 </div>
