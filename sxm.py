@@ -532,7 +532,7 @@ def make_sirius_handler(sxm):
                     self.send_error(404, "No channels available")
             elif self.path.endswith(".json"):
                 guid, channel_id, channel_name, logo, channel_id_user = sxm.get_channel(self.path.rsplit('/', 1)[1][:-5])
-                if guid:
+                if channel_id in sxm.now_playing:
                     self.send_response(200)
                     self.send_header("Content-Type", "text/json")
                     self.end_headers()
