@@ -64,22 +64,6 @@
            box-shadow:0 0 15px rgba(0,0,0,.6);margin-bottom:12px;}
   #titleEl{font-size:1.4rem;font-weight:600;margin-bottom:10px;}
   #player{width:300px;height:40px;margin-top:10px;}
-  .vlc-btn {
-    background:#222;
-    color:#fff;
-    padding:12px 18px;
-    font-size:1.1rem;
-    font-weight:600;
-    border-radius:10px;
-    cursor:pointer;
-    margin:5px 10px 5px 0;
-    display:inline-block;
-    border:1px solid #444;
-    box-shadow:0 2px 8px rgba(0,0,0,0.5);
-    transition:transform .15s ease, box-shadow .15s ease, background .2s ease;
-  }
-  .vlc-btn:hover {background:#333;transform:scale(1.03);box-shadow:0 4px 12px rgba(0,0,0,0.6);}
-  .vlc-btn:active {transform:scale(.97);box-shadow:0 2px 6px rgba(0,0,0,0.5);}
 </style>
 </head>
 <body>
@@ -96,12 +80,6 @@
   <img id="artwork" src="play.png">
   <div id="titleEl">Loading…</div>
   <audio id="player" controls playsinline></audio>
-
-  <!-- VLC Buttons -->
-  <div id="vlcButtons" style="margin-top:15px;">
-    <button id="openAllVLC" class="vlc-btn">🎵 Open All Channels in VLC</button>
-    <button id="openCurrentVLC" class="vlc-btn">▶️ Open Current Channel in VLC</button>
-  </div>
 </div>
 
 <script>
@@ -110,25 +88,6 @@ const player=document.getElementById("player");
 const artwork=document.getElementById("artwork");
 const titleEl=document.getElementById("titleEl");
 const drawer=document.getElementById("channelDrawer");
-
-const btnAllVLC = document.getElementById("openAllVLC");
-const btnCurrentVLC = document.getElementById("openCurrentVLC");
-
-// Open all channels in VLC
-btnAllVLC.onclick = () => {
-  const url = `${window.location.origin}/channels.m3u`;
-  window.location.href = `vlc://${url}`;
-};
-
-// Open currently selected channel in VLC
-btnCurrentVLC.onclick = () => {
-  if (!currentChannelId) {
-    alert("No channel selected");
-    return;
-  }
-  const url = `${window.location.origin}/${currentChannelId}.m3u8`;
-  window.location.href = `vlc://${url}`;
-};
 
 let channels=[];
 let currentChannelArtwork=DEFAULT_ARTWORK;
