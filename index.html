@@ -131,24 +131,53 @@ async function sendChannelChange(id){
 
 // Update current song
 async function updateCurrentSong(){
-  if(!currentChannelId) return;
-  try{
+  if (!currentChannelId) return;
+
+  try {
     const res = await fetch(`/${currentChannelId}.json`);
     const t = await res.json();
-    const ttl = t.title||"";
-    const art = t.artists?.[0]?.name||"";
-    const alb = t.album?.title||"";
-    const artURL = t.album?.creativeArts?.find(a=>a.size==="MEDIUM")?.url || currentChannelArtwork;
 
-    // Show channel + song info
-    const chName = channels.find(c=>c.channelId===currentChannelId)?.name || "";
-    channelInfo.textContent = `${chName}`;
-    songInfo.innerHTML = `${ttl}<br>${art}`;
+    const title  = t.title ?? "";
+    const artist = t.artists?.map(a => a.name).join(", ") ?? "";
+    const album  = t.album?.title ?? "";
 
-    artwork.src = artURL;
-    if('mediaSession' in navigator)
-      navigator.mediaSession.metadata = new MediaMetadata({title:ttl, artist:art, album:alb, artwork:[{src:artURL}]});
-  }catch(e){console.error(e);}
+    // Pull 3 image sizes (TuneIn-style best practice)
+    const arts = t.album?.creativeArts ?? [];
+    const img_small  = arts.find(a => a.size === "THUMBNAIL")?.url;
+    const img_medium = arts.find(a => a.size === "MEDIUM")?.url;
+    const img_large  = arts.find(a => a.size === "SMALL")?.url;   // SiriusXM SMALL is bigger than MEDIUM usually
+    const fallback   = currentChannelArtwork;
+
+    // Final artwork list for MediaSession (ordered smallest → biggest)
+    const artworkSet = [
+      img_small  && { src: img_small,  sizes:"96x96"  },
+      img_medium && { src: img_medium, sizes:"256x256" },
+      img_large  && { src: img_large,  sizes:"512x512" },
+      { src: fallback }
+    ].filter(Boolean);
+
+    // UI updates for web player
+    const chName = channels.find(c => c.channelId === currentChannelId)?.name ?? "";
+    channelInfo.textContent = chName;
+    songInfo.innerHTML = `${title}<br>${artist}`;
+    artwork.src = img_medium || img_large || img_small || fallback;
+
+    // ----------------------------------------------------------------------
+    // *** AirPlay-Aware Metadata (TuneIn-level quality) ***
+    // ----------------------------------------------------------------------
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: `${artist} — ${title}`,   // Looks best on TVs + lock screen
+        artist: artist,
+        album: `${chName} • Live Radio`, // Shows station name clearly on AirPlay
+        artwork: artworkSet              // Multi-resolution → crisp AirPlay cards
+      });
+
+      // iOS/TV Now Playing State
+      navigator.mediaSession.playbackState = player.paused ? "paused" : "playing";
+    }
+
+  } catch (e) { console.error(e); }
 }
 
 // Load channels
