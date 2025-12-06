@@ -234,9 +234,13 @@ class SiriusXM:
     def get_playlist(self, name, use_cache=True):
         guid, channel_id, channel_name, logo, channel_id_user = self.get_channel(name)
 
+
         if not guid or not channel_id:
             self.log('No channel for {}'.format(name))
             return None
+
+        if self.force_channel == "":
+            self.force_channel = channel_id
 
         url = self.get_playlist_url(guid, channel_id, use_cache)
         if not url:
