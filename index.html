@@ -127,7 +127,7 @@ async function updateCurrentSong(){
 
     // Show channel + song info
     const chName = channels.find(c=>c.channelId===currentChannelId)?.name || "";
-    channelInfo.textContent = `${currentChannelId} - ${chName}`;
+    channelInfo.textContent = `${chName}`;
     songInfo.textContent = `${ttl} - ${art}`;
 
     artwork.src = artURL;
