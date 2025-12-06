@@ -20,24 +20,21 @@
   }
 
   * { box-sizing: border-box; margin:0; padding:0; }
-  html, body {
-    margin: 0;
-    padding: 0;
-    width: 100%;
+  html {
     height: 100%;
     background: var(--bg-gradient);
-    overscroll-behavior: none; /* prevent bounce from showing white */
   }
 
-  /* Full viewport fixed background for iOS Safari */
-  body::before {
-    content: "";
-    position: fixed;
-    top: 0; left: 0;
-    width: 100vw; height: 100vh;
-    background: var(--bg-gradient);
-    z-index: -1;
-    background-attachment: fixed; /* ensures edges never show white */
+  body {
+    min-height: 100%;
+    margin: 0;
+    padding: 20px;
+    font-family: 'SF Pro', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: var(--text-primary);
+    background: transparent; /* inherit from html */
   }
   /* --- Top Bar --- */
   #topBar {
