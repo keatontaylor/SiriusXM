@@ -459,10 +459,16 @@ def make_sirius_handler(sxm):
                 extra_info = f"[Current Channel: {channel_id_user, channel_name, channel_id}]"
             elif self.path.endswith('.aac'):
                 guid, channel_id, channel_name, logo, channel_id_user = sxm.get_channel(self.path[1:].split('/', 2)[1])
-                extra_info = f"[Playing Now: {sxm.now_playing[channel_id]['artists'][0]['name']} - {sxm.now_playing[channel_id]['title']}]"
+                if channel_id not in sxm.now_playing:
+                    extra_info = f"[Nothing Currently Playing]"
+                else:
+                    extra_info = f"[Playing Now: {sxm.now_playing[channel_id]['artists'][0]['name']} - {sxm.now_playing[channel_id]['title']}]"
             elif self.path.endswith('.json'):
                 guid, channel_id, channel_name, logo, channel_id_user = sxm.get_channel(self.path.rsplit('/', 1)[1][:-5])
-                extra_info = f"[Playing Now: {sxm.now_playing[channel_id]['artists'][0]['name']} - {sxm.now_playing[channel_id]['title']}]"
+                if channel_id not in sxm.now_playing:
+                    extra_info = f"[Nothing Currently Playing]"
+                else:
+                    extra_info = f"[Playing Now: {sxm.now_playing[channel_id]['artists'][0]['name']} - {sxm.now_playing[channel_id]['title']}]"
             # Original log format is: "%s - - [%s] %s\n"
             super().log_message(format + " %s", *args, extra_info)
 
