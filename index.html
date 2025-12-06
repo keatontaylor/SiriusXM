@@ -5,77 +5,43 @@
 <title>HLS Audio Player with Channels</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: #111;
-    color: #fff;
-    margin: 0;
-    overflow-x: hidden;
-  }
-
-  #openChannelsBtn {
-    background:#222;
-    color:#fff;
-    padding:12px 18px;
-    font-size:1.1rem;
-    font-weight:600;
-    border-radius:10px;
-    cursor:pointer;
-    margin:20px auto;
-    display:block;
-    border:1px solid #444;
-    box-shadow:0 2px 8px rgba(0,0,0,0.5);
-    transition:transform .15s ease, box-shadow .15s ease, background .2s ease;
-  }
-  #openChannelsBtn:hover {background:#333;transform:scale(1.03);box-shadow:0 4px 12px rgba(0,0,0,0.6);}
-  #openChannelsBtn:active {transform:scale(.97);box-shadow:0 2px 6px rgba(0,0,0,0.5);}
-
-  /* Drawer */
-  #channelDrawer {
-    position:fixed;top:0;left:0;
-    transform:translateX(-100%);
-    width:350px;height:100vh;background:#1a1a1a;
-    box-shadow:4px 0 20px rgba(0,0,0,0.5);
-    padding:20px;overflow-y:auto;transition:transform .35s ease;z-index:9999;
-  }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #111; color:#fff; margin:0; overflow-x:hidden; }
+  button { background:#222; color:#fff; padding:12px 18px; font-size:1.1rem; font-weight:600; border-radius:10px; cursor:pointer; margin:10px auto; display:block; border:1px solid #444; box-shadow:0 2px 8px rgba(0,0,0,0.5); transition:transform .15s ease, box-shadow .15s ease, background .2s ease;}
+  button:hover {background:#333; transform:scale(1.03);}
+  button:active {transform:scale(.97);}
+  #channelDrawer {position:fixed; top:0; left:0; transform:translateX(-100%); width:350px; height:100vh; background:#1a1a1a; box-shadow:4px 0 20px rgba(0,0,0,0.5); padding:20px; overflow-y:auto; transition:transform .35s ease; z-index:9999;}
   #channelDrawer.open {transform:translateX(0);}
-  #closeDrawer {background:#333;padding:6px 10px;font-size:.9rem;border-radius:4px;cursor:pointer;float:right;margin-bottom:10px;}
-
-  /* Channel grid */
-  #channelGrid {
-    display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(120px,1fr));
-    gap:14px;padding-top:35px;
-  }
-  .channel-card {
-    background:#222;border-radius:10px;padding:10px;text-align:center;
-    cursor:pointer;transition:transform .2s ease, box-shadow .2s ease;
-  }
-  .channel-card:hover {transform:scale(1.05);box-shadow:0 0 12px rgba(255,255,255,0.2);}
-  .channel-card img {
-    width:85px;height:85px;border-radius:6px;object-fit:cover;margin-bottom:6px;
-    opacity:0;transition:opacity .4s ease; /* fade-in image when loaded */
-  }
-  .channel-name {font-size:.85rem;margin-top:4px;}
-
-  /* Now Playing */
-  #now-playing{text-align:center;margin-top:30px;}
-  #artwork{width:250px;height:250px;border-radius:12px;object-fit:cover;
-           box-shadow:0 0 15px rgba(0,0,0,.6);margin-bottom:12px;}
+  #closeDrawer {background:#333; padding:6px 10px; font-size:.9rem; border-radius:4px; cursor:pointer; float:right; margin-bottom:10px;}
+  #channelGrid {display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:14px; padding-top:35px;}
+  .channel-card {background:#222; border-radius:10px; padding:10px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer; transition:transform .2s ease, box-shadow .2s ease;}
+  .channel-card:hover {transform:scale(1.05); box-shadow:0 0 12px rgba(255,255,255,0.2);}
+  .channel-card.server-hover:hover {background:#333;}
+  .channel-card img {width:85px; height:85px; border-radius:6px; object-fit:cover; opacity:0; transition:opacity .4s ease;}
+  .channel-name {font-size:.85rem; margin-top:4px; text-align:center;}
+  .cng-btn {padding:4px 8px; font-size:.75rem; border-radius:6px; background:#444; color:#fff; border:none; cursor:pointer; transition:.2s;}
+  .cng-btn:hover {background:#666;}
+  #now-playing{text-align:center;margin-top:20px;}
+  #artwork{width:250px;height:250px;border-radius:12px;object-fit:cover; box-shadow:0 0 15px rgba(0,0,0,.6);margin-bottom:12px;}
   #titleEl{font-size:1.4rem;font-weight:600;margin-bottom:10px;}
   #player{width:300px;height:40px;margin-top:10px;}
+  .hidden {display:none !important;}
 </style>
 </head>
 <body>
 
-<button id="openChannelsBtn">📡 Browse Channels</button>
+<!-- Toggles -->
+<button id="serverModeToggle">🛑 Server Mode: OFF</button>
+<button id="honorServerToggle">🎛 Honor Server Channel: ON</button>
 
+<!-- Channel Drawer -->
+<button id="openChannelsBtn">📡 Browse Channels</button>
 <div id="channelDrawer">
   <div id="closeDrawer">Close ✕</div>
   <h2>Channel List</h2>
   <div id="channelGrid"></div>
 </div>
 
+<!-- Now Playing -->
 <div id="now-playing">
   <img id="artwork" src="play.png">
   <div id="titleEl">Loading…</div>
@@ -92,97 +58,137 @@ const drawer=document.getElementById("channelDrawer");
 let channels=[];
 let currentChannelArtwork=DEFAULT_ARTWORK;
 let currentChannelId=null;
-let clickListener=null;
 
-// Drawer open/close
-document.getElementById("openChannelsBtn").onclick=()=>drawer.classList.add("open");
-document.getElementById("closeDrawer").onclick=()=>drawer.classList.remove("open");
+let serverMode = false;
+let honorServer = true; // default ON
+const honorBtn = document.getElementById("honorServerToggle");
 
-// Fetch current song for a specific channel
+// Drawer
+document.getElementById("openChannelsBtn").onclick = () => drawer.classList.add("open");
+document.getElementById("closeDrawer").onclick = () => drawer.classList.remove("open");
+
+// Server Mode toggle
+document.getElementById("serverModeToggle").onclick = () => {
+  serverMode = !serverMode;
+  document.getElementById("serverModeToggle").textContent = `🛑 Server Mode: ${serverMode?"ON":"OFF"}`;
+
+  if(serverMode){
+    // Force honor server ON
+    honorServer = true;
+    honorBtn.classList.add("hidden");
+
+    player.pause();
+    player.classList.add("hidden");
+    document.querySelectorAll(".cng-btn").forEach(b=>b.classList.remove("hidden"));
+    document.querySelectorAll(".channel-card").forEach(c=>c.classList.add("server-hover"));
+  } else {
+    honorBtn.classList.remove("hidden");
+    document.querySelectorAll(".cng-btn").forEach(b=>b.classList.add("hidden"));
+    document.querySelectorAll(".channel-card").forEach(c=>c.classList.remove("server-hover"));
+    player.classList.remove("hidden");
+    if(currentChannelId && !honorServer){
+      loadChannel(channels.find(c=>c.channelId===currentChannelId));
+    }
+  }
+};
+
+// Honor Server toggle (only when serverMode OFF)
+honorBtn.onclick = () => {
+  if(serverMode) return; 
+  honorServer = !honorServer;
+  honorBtn.textContent = `🎛 Honor Server Channel: ${honorServer?"ON":"OFF"}`;
+};
+
+// Send .cng
+async function sendChannelChange(id){
+  if(!id) return;
+  try{ await fetch(`/${id}.cng`); console.log("Sent channel change →", id); }
+  catch(e){console.error(e);}
+}
+
+// Update current song
 async function updateCurrentSong(){
   if(!currentChannelId) return;
   try{
-    const res=await fetch(`/${currentChannelId}.json`);
-    const t=await res.json();
-    const ttl=t.title||"";
-    const art=t.artists?.[0]?.name||"";
-    const alb=t.album?.title||"";
-    const artURL=t.album?.creativeArts?.find(a=>a.size==="MEDIUM")?.url || currentChannelArtwork;
-    titleEl.innerHTML=`${ttl}<br>${art}`;
-    artwork.src=artURL;
-    if('mediaSession'in navigator)
-      navigator.mediaSession.metadata=new MediaMetadata({
-        title:ttl, artist:art, album:alb, artwork:[{src:artURL}]
-      });
-  }catch(e){console.error("Failed to fetch channel metadata:", e);}
+    const res = await fetch(`/${currentChannelId}.json`);
+    const t = await res.json();
+    const ttl = t.title||"";
+    const art = t.artists?.[0]?.name||"";
+    const alb = t.album?.title||"";
+    const artURL = t.album?.creativeArts?.find(a=>a.size==="MEDIUM")?.url || currentChannelArtwork;
+    titleEl.innerHTML = `${ttl}<br>${artURL?art:""}`;
+    artwork.src = artURL;
+    if('mediaSession' in navigator)
+      navigator.mediaSession.metadata = new MediaMetadata({title:ttl, artist:art, album:alb, artwork:[{src:artURL}]});
+  }catch(e){console.error(e);}
 }
 
-// Load channels robustly
+// Load channels
 async function loadChannels(){
   try{
     const res = await fetch("/channels.m3u");
     const lines = (await res.text()).split(/\r?\n/);
     channels = [];
 
-    for(let i=0; i<lines.length; i++){
+    for(let i=0;i<lines.length;i++){
       if(lines[i].startsWith("#EXTINF:")){
-        // Full display name with number
-        const displayName = lines[i].split(",")[1]?.trim() || "Unknown";
-
-        // Channel ID for JSON fetch: use tvg-id if present, otherwise fallback
+        const displayName = lines[i].split(",")[1]?.trim()||"Unknown";
         const channelIdMatch = lines[i].match(/tvg-id="([^"]+)"/);
-        const channelId = channelIdMatch 
-                          ? channelIdMatch[1] 
-                          : displayName.replace(/\s+/g,"_").toLowerCase();
-
-        // Stream URL is the next line
+        const channelId = channelIdMatch ? channelIdMatch[1] : displayName.replace(/\s+/g,"_").toLowerCase();
         const url = lines[i+1]?.trim();
         if(!url) continue;
-
-        // Extract logo, proxy if necessary
         const logoMatch = lines[i].match(/tvg-logo="([^"]+)"/);
-        let logo = currentChannelArtwork; 
+        let logo=currentChannelArtwork;
         if(logoMatch){
           const original = logoMatch[1];
-          logo = (location.protocol === "https:" && original.startsWith("http://"))
-                 ? `/proxy/${encodeURIComponent(original)}`
-                 : original;
+          logo=(location.protocol==="https:" && original.startsWith("http://")) ? `/proxy/${encodeURIComponent(original)}` : original;
         }
-
-        channels.push({
-          name: displayName,
-          url,
-          logo,
-          channelId
-        });
+        channels.push({name:displayName,url,logo,channelId});
       }
     }
 
-    // Render grid
-    const grid = document.getElementById("channelGrid");
-    grid.innerHTML = "";
-    channels.forEach(ch => {
+    const grid=document.getElementById("channelGrid");
+    grid.innerHTML="";
+
+    channels.forEach(ch=>{
       const card = document.createElement("div");
-      card.className = "channel-card";
-      card.innerHTML = `
-        <img data-logo="${ch.logo}" alt="logo">
-        <div class="channel-name">${ch.name}</div>
-      `;
-      card.onclick = () => { loadChannel(ch); drawer.classList.remove("open"); };
+      card.className="channel-card";
+      card.innerHTML = `<img data-logo="${ch.logo}" alt="logo"><div class="channel-name">${ch.name}</div><button class="cng-btn ${serverMode?'':'hidden'}">Send to Web Players</button>`;
+
+      card.addEventListener("click", ()=>{ 
+        if(serverMode){
+          sendChannelChange(ch.channelId);
+          currentChannelId = ch.channelId;
+          currentChannelArtwork = ch.logo;
+          artwork.src = ch.logo;
+          titleEl.textContent = ch.name;
+        } else {
+          loadChannel(ch);
+        }
+        drawer.classList.remove("open"); 
+      });
+
+      card.querySelector(".cng-btn").addEventListener("click", e=>{
+        e.stopPropagation();
+        sendChannelChange(ch.channelId);
+        if(serverMode){
+          currentChannelId = ch.channelId;
+          currentChannelArtwork = ch.logo;
+          artwork.src = ch.logo;
+          titleEl.textContent = ch.name;
+        }
+      });
+
       grid.appendChild(card);
     });
 
-    setupLazyLoading(); // lazy-load images
+    setupLazyLoading();
+    if(channels.length && !serverMode) loadChannel(channels[0]);
 
-    // Auto-load first channel if available
-    if(channels.length) loadChannel(channels[0]);
-
-  } catch(e){
-    console.error("Failed to load channels:", e);
-  }
+  }catch(e){console.error(e);}
 }
 
-// Lazy-load channel art only when card is visible
+// Lazy load images
 function setupLazyLoading(){
   const imgs=document.querySelectorAll('#channelGrid img[data-logo]');
   const observer=new IntersectionObserver(entries=>{
@@ -190,7 +196,7 @@ function setupLazyLoading(){
       if(entry.isIntersecting){
         const img=entry.target;
         img.src=img.dataset.logo;
-        img.onload=()=>img.style.opacity=1; // fade-in
+        img.onload=()=>img.style.opacity=1;
         img.removeAttribute("data-logo");
         observer.unobserve(img);
       }
@@ -199,29 +205,40 @@ function setupLazyLoading(){
   imgs.forEach(img=>observer.observe(img));
 }
 
-// Load channel
+// Load channel (respects server mode)
 function loadChannel(ch){
   currentChannelArtwork=ch.logo;
-  currentChannelId=ch.channelId; // <-- store current channel id
-  player.src=ch.url;
-  player.play().catch(()=>{
-    if(clickListener) document.removeEventListener("click",clickListener);
-    clickListener=()=>{player.play();document.removeEventListener("click",clickListener);};
-    document.addEventListener("click",clickListener);
-    document.addEventListener("touchstart",clickListener);
-  });
-  updateMetadata({title:ch.name, art:ch.logo});
+  currentChannelId=ch.channelId;
+  if(!serverMode){
+    player.src = ch.url;
+    player.play().catch(()=>{});
+  }
+  titleEl.textContent = ch.name;
+  artwork.src = ch.logo;
 }
 
-// Update metadata UI
-function updateMetadata({title, t, art}){
-  titleEl.textContent=t||title;
-  artwork.src=art||DEFAULT_ARTWORK;
+// Poll /current.chn
+async function pollForcedChannel(){
+  if(!honorServer) return;
+  try{
+    const r=await fetch("/current.chn");
+    const forced=(await r.text()).trim();
+    if(forced && forced!==currentChannelId){
+      const f=channels.find(c=>c.channelId===forced);
+      if(f){
+        loadChannel(f);      
+        updateCurrentSong();  
+      }
+    }
+  }catch(e){}
 }
 
 loadChannels();
-setInterval(updateCurrentSong, 3000);
+setInterval(updateCurrentSong,3000);
+setInterval(pollForcedChannel,5000);
 updateCurrentSong();
+pollForcedChannel();
 </script>
+
 </body>
 </html>

@@ -24,6 +24,7 @@ class SiriusXM:
         self.password = password
         self.playlists = {}
         self.now_playing = {}
+        self.force_channel = ""
         self.channels = None
 
     def log(self, x):
@@ -564,6 +565,22 @@ def make_sirius_handler(sxm):
                     else:
                         self.send_response(500)
                         self.end_headers()
+                elif self.path.endswith('.cng'):
+                    channel = self.path.rsplit('/', 1)[1][:-4]
+                    if channel:
+                        sxm.log(f"forcing all web UI players to channel {channel}")
+                        sxm.force_channel = channel
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'application/x-mpegURL')
+                        self.end_headers()
+                    else:
+                        self.send_response(500)
+                        self.end_headers()
+                elif self.path.endswith('.chn'):
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'text/plain;')
+                    self.end_headers()
+                    self.wfile.write(sxm.force_channel.encode("utf-8"))
                 elif self.path.endswith('.aac'):
                     data = sxm.get_segment(self.path[1:])
                     guid, channel_id, channel_name, logo, channel_id_user = sxm.get_channel(self.path[1:].split('/', 2)[1])
