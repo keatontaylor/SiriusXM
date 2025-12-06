@@ -284,7 +284,11 @@ document.getElementById("openChannelsBtn").onclick = () => {
 };
 document.getElementById("closeDrawer").onclick = () => drawer.classList.remove("open");
 
-settingsBtn.onclick = () => settingsDrawer.classList.add("open");
+document.getElementById("settingsBtn").onclick = () => {
+  document.getElementById("settingsDrawer").classList.toggle("open");
+};
+
+
 document.getElementById("closeSettings").onclick = () => settingsDrawer.classList.remove("open");
 
 // --- Server Mode ---
@@ -308,6 +312,18 @@ document.getElementById("serverModeToggle").onclick = () => {
     }
   }
 };
+
+// Close settings drawer when clicking outside
+document.addEventListener("click", (e) => {
+  const settingsDrawer = document.getElementById("settingsDrawer");
+  const settingsBtn = document.getElementById("settingsBtn");
+
+  if(settingsDrawer.classList.contains("open") &&
+     !settingsDrawer.contains(e.target) &&
+     e.target !== settingsBtn) {
+    settingsDrawer.classList.remove("open");
+  }
+});
 
 // --- Honor Server ---
 const honorBtn = document.getElementById("honorServerToggle");
