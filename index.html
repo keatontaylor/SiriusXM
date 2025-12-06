@@ -20,17 +20,25 @@
   }
 
   * { box-sizing: border-box; margin:0; padding:0; }
-  body {
-    font-family: 'SF Pro', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
     background: var(--bg-gradient);
-    color: var(--text-primary);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-height: 100vh;
-    padding: 20px;
+    overscroll-behavior: none; /* prevent bounce from showing white */
   }
 
+  /* Full viewport fixed background for iOS Safari */
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background: var(--bg-gradient);
+    z-index: -1;
+    background-attachment: fixed; /* ensures edges never show white */
+  }
   /* --- Top Bar --- */
   #topBar {
     width: 100%;
