@@ -267,10 +267,10 @@ async function pollForcedChannel(){
 }
 
 loadChannels();
+pollForcedChannel();
+updateCurrentSong();
 setInterval(updateCurrentSong,3000);
 setInterval(pollForcedChannel,5000);
-updateCurrentSong();
-pollForcedChannel();
 </script>
 
 </body>
