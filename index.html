@@ -67,6 +67,14 @@ const honorBtn = document.getElementById("honorServerToggle");
 document.getElementById("openChannelsBtn").onclick = () => drawer.classList.add("open");
 document.getElementById("closeDrawer").onclick = () => drawer.classList.remove("open");
 
+document.getElementById("openChannelsBtn").onclick = () => {
+  if(!serverMode && honorServer){
+    alert("⚠️ Cannot browse channels while Honor Server Channel is ON.");
+    return;
+  }
+  drawer.classList.add("open");
+};
+
 // Server Mode toggle
 document.getElementById("serverModeToggle").onclick = () => {
   serverMode = !serverMode;
