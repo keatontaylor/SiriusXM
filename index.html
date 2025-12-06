@@ -2,42 +2,204 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>HLS Audio Player with Channels</title>
+<title>Liquid Glass HLS Audio Player</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #111; color:#fff; margin:0; overflow-x:hidden; }
-  button { background:#222; color:#fff; padding:12px 18px; font-size:1.1rem; font-weight:600; border-radius:10px; cursor:pointer; margin:10px auto; display:block; border:1px solid #444; box-shadow:0 2px 8px rgba(0,0,0,0.5); transition:transform .15s ease, box-shadow .15s ease, background .2s ease;}
-  button:hover {background:#333; transform:scale(1.03);}
-  button:active {transform:scale(.97);}
-  #channelDrawer {position:fixed; top:0; left:0; transform:translateX(-100%); width:350px; height:100vh; background:#1a1a1a; box-shadow:4px 0 20px rgba(0,0,0,0.5); padding:20px; overflow-y:auto; transition:transform .35s ease; z-index:9999;}
-  #channelDrawer.open {transform:translateX(0);}
-  #closeDrawer {background:#333; padding:6px 10px; font-size:.9rem; border-radius:4px; cursor:pointer; float:right; margin-bottom:10px;}
-  #channelGrid {display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:14px; padding-top:35px;}
-  .channel-card {background:#222; border-radius:10px; padding:10px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer; transition:transform .2s ease, box-shadow .2s ease;}
-  .channel-card:hover {transform:scale(1.05); box-shadow:0 0 12px rgba(255,255,255,0.2);}
-  .channel-card.server-hover:hover {background:#333;}
-  .channel-card img {width:85px; height:85px; border-radius:6px; object-fit:cover; opacity:0; transition:opacity .4s ease;}
-  .channel-name {font-size:.85rem; margin-top:4px; text-align:center;}
-  .cng-btn {padding:4px 8px; font-size:.75rem; border-radius:6px; background:#444; color:#fff; border:none; cursor:pointer; transition:.2s;}
-  .cng-btn:hover {background:#666;}
-  #now-playing{text-align:center;margin-top:20px;}
-  #artwork{width:250px;height:250px;border-radius:12px;object-fit:cover; box-shadow:0 0 15px rgba(0,0,0,.6);margin-bottom:12px;}
-  #channelInfo{font-size:1.4rem;font-weight:700;margin-bottom:6px;}
-  #songInfo{font-size:1rem;color:#ccc;}
-  #player{width:300px;height:40px;margin-top:10px;}
-  .hidden {display:none !important;}
+  /* --- Colors & Variables --- */
+  :root {
+    --glass-bg: rgba(30,30,30,0.5);
+    --glass-blur: 20px;
+    --accent: #0ff;
+    --accent-hover: #0cc;
+    --text-primary: #fff;
+    --text-secondary: #ddd;
+    --shadow: rgba(0,0,0,0.4);
+    --radius: 24px;
+  }
+
+  /* --- Base --- */
+  * { box-sizing: border-box; margin:0; padding:0; }
+  body {
+    font-family: 'SF Pro', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: linear-gradient(135deg, #0b0b0b, #111111);
+    color: var(--text-primary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    min-height: 100vh;
+    backdrop-filter: blur(4px);
+  }
+
+  /* --- Buttons --- */
+  button {
+    background: var(--glass-bg);
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: var(--radius);
+    cursor: pointer;
+    padding: 12px 20px;
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 8px 24px var(--shadow);
+    transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s;
+    backdrop-filter: blur(var(--glass-blur));
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+  }
+
+  button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 30px var(--shadow);
+    background: rgba(30,30,30,0.6);
+    border-color: rgba(255,255,255,0.2);
+  }
+
+  button:active { transform: translateY(0); }
+
+  /* --- Toggles --- */
+  #serverModeToggle, #honorServerToggle { margin: 10px 5px; }
+
+  /* --- Drawer --- */
+  #channelDrawer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    transform: translateX(-100%);
+    width: 380px;
+    height: 100vh;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    box-shadow: 6px 0 24px var(--shadow);
+    padding: 25px;
+    overflow-y: auto;
+    transition: transform 0.35s ease;
+    z-index: 9999;
+    border-top-right-radius: var(--radius);
+    border-bottom-right-radius: var(--radius);
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  #channelDrawer.open { transform: translateX(0); }
+  #closeDrawer {
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    cursor: pointer;
+    float: right;
+  }
+  #channelDrawer h2 { margin-bottom: 20px; font-weight: 700; font-size: 1.3rem; color: var(--accent); }
+
+  /* --- Grid --- */
+  #channelGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px,1fr));
+    gap: 16px;
+  }
+
+  .channel-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border-radius: var(--radius);
+    padding: 12px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .channel-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 16px 40px var(--shadow);
+    border-color: rgba(255,255,255,0.15);
+  }
+  .channel-card img {
+    width: 90px;
+    height: 90px;
+    border-radius: var(--radius);
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.4s ease, transform 0.3s ease;
+  }
+  .channel-card:hover img { transform: scale(1.05); }
+  .channel-name { font-size: 0.9rem; font-weight: 500; text-align: center; color: var(--text-primary); }
+
+  .cng-btn {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    border-radius: var(--radius);
+    background: var(--accent);
+    color: var(--bg);
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .cng-btn:hover { background: var(--accent-hover); }
+
+  /* --- Now Playing --- */
+  #now-playing {
+    margin-top: 30px;
+    text-align: center;
+    max-width: 400px;
+    width: 100%;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: 0 16px 48px var(--shadow);
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+
+  #artwork {
+    width: 300px;
+    height: 300px;
+    border-radius: var(--radius);
+    object-fit: cover;
+    box-shadow: 0 12px 36px var(--shadow);
+    margin-bottom: 16px;
+    transition: transform 0.3s ease;
+  }
+  #artwork:hover { transform: scale(1.02); }
+
+  #channelInfo {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  #songInfo {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    line-height: 1.3;
+  }
+  #player {
+    width: 100%;
+    margin-top: 12px;
+    border-radius: var(--radius);
+    outline: none;
+  }
+
+  .hidden { display: none !important; }
+
 </style>
 </head>
 <body>
 
 <!-- Toggles -->
-<button id="serverModeToggle">🛑 Server Mode: OFF</button>
-<button id="honorServerToggle">🎛 Honor Server Channel: ON</button>
+<div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
+  <button id="serverModeToggle">🛑 Server Mode: OFF</button>
+  <button id="honorServerToggle">🎛 Honor Server Channel: ON</button>
+</div>
 
 <!-- Channel Drawer -->
 <button id="openChannelsBtn">📡 Browse Channels</button>
 <div id="channelDrawer">
-  <div id="closeDrawer">Close ✕</div>
+  <div id="closeDrawer">✕ Close</div>
   <h2>Channel List</h2>
   <div id="channelGrid"></div>
 </div>
@@ -135,7 +297,7 @@ async function updateCurrentSong(){
       navigator.mediaSession.metadata = new MediaMetadata({title:ttl, artist:art, album:alb, artwork:[{src:artURL}]});
   }catch(e){console.error(e);}
 }
-
+  
 // Load channels
 async function loadChannels(){
   try{
