@@ -5,212 +5,227 @@
 <title>Liquid Glass Modern HLS Player</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-:root {
-  --bg-gradient: linear-gradient(135deg,#0b0b0b,#111);
-  --glass-bg: rgba(30,30,30,0.5);
-  --glass-blur: 25px;
-  --accent: #FF6B6B;
-  --accent-hover: #FF4B4B;
-  --text-primary: #fff;
-  --text-secondary: #ccc;
-  --shadow: rgba(0,0,0,0.5);
-  --radius: 24px;
-}
+  /* --- Variables --- */
+  :root {
+    --bg-gradient: linear-gradient(135deg,#0b0b0b,#111);
+    --glass-bg: rgba(30,30,30,0.6);
+    --glass-blur: 25px;
+    --accent: linear-gradient(135deg,#ff6ec4,#7873f5);
+    --accent-hover: linear-gradient(135deg,#ff5fc0,#5f70f5);
+    --text-primary: #fff;
+    --text-secondary: #ccc;
+    --shadow: rgba(0,0,0,0.5);
+    --radius: 24px;
+    --button-radius: 16px;
+  }
 
-* { box-sizing: border-box; margin:0; padding:0; }
-body {
-  font-family: 'SF Pro', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: var(--bg-gradient);
-  color: var(--text-primary);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-height: 100vh;
-  padding: 20px;
-}
+  * { box-sizing: border-box; margin:0; padding:0; }
+  body {
+    font-family: 'SF Pro', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg-gradient);
+    color: var(--text-primary);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+  }
 
-/* --- Top Bar --- */
-#topBar {
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 20px;
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  background: var(--glass-bg);
-  border-bottom: 1px solid rgba(255,255,255,0.08);
-  border-radius: var(--radius);
-  margin-bottom: 25px;
-  position: sticky;
-  top: 0;
-  z-index: 999;
-}
+  /* --- Top Bar --- */
+  #topBar {
+    width: 100%;
+    max-width: 600px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+  }
 
-.top-btn {
-  background: var(--glass-bg);
-  border: none;
-  border-radius: var(--radius);
-  padding: 10px 14px;
-  cursor: pointer;
-  font-size: 1.1rem;
-  color: var(--text-primary);
-  box-shadow: 0 6px 18px var(--shadow);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
+  #topBar button {
+    background: var(--glass-bg);
+    border-radius: var(--button-radius);
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 10px 16px;
+    font-size: 1rem;
+    cursor: pointer;
+    box-shadow: 0 6px 20px var(--shadow);
+    transition: transform .15s, box-shadow .2s, background .2s;
+    backdrop-filter: blur(var(--glass-blur));
+  }
+  #topBar button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px var(--shadow);
+    background: rgba(50,50,50,0.7);
+  }
 
-.top-btn:hover {
-  background: rgba(40,40,40,0.6);
-  transform: translateY(-2px);
-  box-shadow: 0 10px 24px var(--shadow);
-}
+  /* --- Settings Drawer --- */
+  #settingsDrawer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    transform: translateX(-100%);
+    width: 280px;
+    height: 100vh;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    box-shadow: 6px 0 24px var(--shadow);
+    padding: 25px;
+    overflow-y: auto;
+    transition: transform .35s ease;
+    z-index: 9999;
+    border-top-right-radius: var(--radius);
+    border-bottom-right-radius: var(--radius);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  #settingsDrawer.open { transform: translateX(0); }
+  #closeSettings {
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    cursor: pointer;
+    float: right;
+    margin-bottom: 15px;
+  }
+  #settingsDrawer h2 {
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.4rem;
+    color: var(--accent);
+    margin-bottom: 20px;
+  }
+  #settingsDrawer button {
+    width: 100%;
+    margin-bottom: 12px;
+    background: var(--glass-bg);
+  }
 
-/* --- Channel Drawer --- */
-#channelDrawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  transform: translateX(100%);
-  width: 400px;
-  height: 100vh;
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  box-shadow: -6px 0 24px var(--shadow);
-  padding: 25px;
-  overflow-y: auto;
-  transition: transform 0.35s ease;
-  z-index: 9999;
-  border-top-left-radius: var(--radius);
-  border-bottom-left-radius: var(--radius);
-  border: 1px solid rgba(255,255,255,0.08);
-}
+  /* --- Channel Drawer --- */
+  #channelDrawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    transform: translateX(100%);
+    width: 400px;
+    height: 100vh;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    box-shadow: -6px 0 24px var(--shadow);
+    padding: 25px;
+    overflow-y: auto;
+    transition: transform 0.35s ease;
+    z-index: 9999;
+    border-top-left-radius: var(--radius);
+    border-bottom-left-radius: var(--radius);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  #channelDrawer.open { transform: translateX(0); }
+  #closeDrawer {
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    cursor: pointer;
+    float: right;
+    margin-bottom: 15px;
+  }
+  #channelDrawer h2 {
+    margin-bottom: 20px;
+    font-weight: 700;
+    font-size: 1.4rem;
+    color: var(--accent);
+    text-align: center;
+  }
 
-#channelDrawer.open { transform: translateX(0); }
-#closeDrawer {
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-  cursor: pointer;
-  float: right;
-}
-#channelDrawer h2 {
-  margin-bottom: 20px;
-  font-weight: 700;
-  font-size: 1.4rem;
-  color: var(--accent);
-  text-align: center;
-}
+  /* --- Channel Grid --- */
+  #channelGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill,minmax(120px,1fr));
+    gap: 16px;
+  }
 
-/* --- Channel Grid --- */
-#channelGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill,minmax(120px,1fr));
-  gap: 16px;
-}
+  .channel-card {
+    background: var(--glass-bg);
+    border-radius: var(--radius);
+    padding: 12px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: transform .25s ease, box-shadow .25s ease;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .channel-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 16px 40px var(--shadow);
+    border-color: rgba(255,255,255,0.15);
+  }
+  .channel-card img {
+    width: 90px;
+    height: 90px;
+    border-radius: var(--radius);
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity .4s ease, transform .3s ease;
+  }
+  .channel-card:hover img { transform: scale(1.05); }
+  .channel-name { font-size: 0.9rem; font-weight: 500; text-align: center; color: var(--text-primary); }
+  .cng-btn {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    border-radius: var(--radius);
+    background: var(--accent);
+    color: var(--text-primary);
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: background .2s;
+  }
+  .cng-btn:hover { background: var(--accent-hover); }
 
-.channel-card {
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  border-radius: var(--radius);
-  padding: 12px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
-  border: 1px solid rgba(255,255,255,0.05);
-}
-.channel-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 16px 40px var(--shadow);
-  border-color: rgba(255,255,255,0.15);
-}
-
-.channel-card img {
-  width: 90px;
-  height: 90px;
-  border-radius: var(--radius);
-  object-fit: cover;
-  opacity: 0;
-  transition: opacity 0.4s ease, transform 0.3s ease;
-}
-.channel-card:hover img { transform: scale(1.05); }
-
-.channel-name { font-size: 0.9rem; font-weight: 500; text-align: center; color: var(--text-primary); }
-
-.cng-btn {
-  padding: 6px 12px;
-  font-size: 0.75rem;
-  border-radius: var(--radius);
-  background: var(--accent);
-  color: var(--bg);
-  font-weight: 600;
-  border: none;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.cng-btn:hover { background: var(--accent-hover); }
-
-/* --- Now Playing Panel --- */
-#now-playing {
-  margin-top: 30px;
-  text-align: center;
-  max-width: 450px;
-  width: 100%;
-  background: var(--glass-bg);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  border-radius: var(--radius);
-  padding: 25px;
-  box-shadow: 0 16px 48px var(--shadow);
-  border: 1px solid rgba(255,255,255,0.05);
-}
-
-#artwork {
-  width: 320px;
-  height: 320px;
-  border-radius: var(--radius);
-  object-fit: cover;
-  box-shadow: 0 12px 36px var(--shadow);
-  margin-bottom: 16px;
-  transition: transform 0.3s ease;
-}
-#artwork:hover { transform: scale(1.02); }
-
-#channelInfo {
-  font-size: 1.7rem;
-  font-weight: 700;
-  margin-bottom: 10px;
-}
-#songInfo {
-  font-size: 1.1rem;
-  color: var(--text-secondary);
-  line-height: 1.4;
-}
-
-#player {
-  width: 100%;
-  margin-top: 16px;
-  border-radius: var(--radius);
-  outline: none;
-}
-
-.hidden { display: none !important; }
+  /* --- Now Playing --- */
+  #now-playing {
+    margin-top: 20px;
+    text-align: center;
+    max-width: 450px;
+    width: 100%;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    border-radius: var(--radius);
+    padding: 25px;
+    box-shadow: 0 16px 48px var(--shadow);
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  #artwork {
+    width: 320px;
+    height: 320px;
+    border-radius: var(--radius);
+    object-fit: cover;
+    box-shadow: 0 12px 36px var(--shadow);
+    margin-bottom: 16px;
+    transition: transform .3s ease;
+  }
+  #artwork:hover { transform: scale(1.02); }
+  #channelInfo { font-size: 1.7rem; font-weight: 700; margin-bottom: 10px; }
+  #songInfo { font-size: 1.1rem; color: var(--text-secondary); line-height: 1.4; }
+  #player { width: 100%; margin-top: 16px; border-radius: var(--radius); outline: none; }
+  .hidden { display: none !important; }
 </style>
 </head>
 <body>
 
 <!-- Top Bar -->
 <div id="topBar">
-  <button id="settingsBtn" class="top-btn">⚙️</button>
-  <button id="openChannelsBtn" class="top-btn">📡 Browse Channels</button>
+  <button id="settingsBtn">⚙️</button>
+  <button id="openChannelsBtn">📡 Browse Channels</button>
+</div>
+
+<!-- Settings Panel -->
+<div id="settingsDrawer">
+  <div id="closeSettings">✕ Close</div>
+  <h2>Settings</h2>
+  <button id="serverModeToggle">🛑 Server Mode: OFF</button>
+  <button id="honorServerToggle">🎛 Honor Server Channel: ON</button>
 </div>
 
 <!-- Channel Drawer -->
@@ -229,13 +244,14 @@ body {
 </div>
 
 <script>
-// --- Player Logic ---
 const DEFAULT_ARTWORK="play.png";
 const player=document.getElementById("player");
 const artwork=document.getElementById("artwork");
 const channelInfo=document.getElementById("channelInfo");
 const songInfo=document.getElementById("songInfo");
 const drawer=document.getElementById("channelDrawer");
+const settingsDrawer = document.getElementById("settingsDrawer");
+const settingsBtn = document.getElementById("settingsBtn");
 
 let channels=[];
 let currentChannelArtwork=DEFAULT_ARTWORK;
@@ -244,11 +260,8 @@ let currentChannelId=null;
 let serverMode = false;
 let honorServer = true;
 
-const openChannelsBtn=document.getElementById("openChannelsBtn");
-const settingsBtn=document.getElementById("settingsBtn");
-
-// Drawer
-openChannelsBtn.onclick = () => {
+// --- Open/Close drawers ---
+document.getElementById("openChannelsBtn").onclick = () => {
   if(!serverMode && honorServer){
     alert("Cannot browse channels while server mode or honor server channels is ON");
     return;
@@ -257,13 +270,71 @@ openChannelsBtn.onclick = () => {
 };
 document.getElementById("closeDrawer").onclick = () => drawer.classList.remove("open");
 
-// Load channels
+settingsBtn.onclick = () => settingsDrawer.classList.add("open");
+document.getElementById("closeSettings").onclick = () => settingsDrawer.classList.remove("open");
+
+// --- Server Mode ---
+document.getElementById("serverModeToggle").onclick = () => {
+  serverMode = !serverMode;
+  document.getElementById("serverModeToggle").textContent = `🛑 Server Mode: ${serverMode?"ON":"OFF"}`;
+  if(serverMode){
+    honorServer = true;
+    document.getElementById("honorServerToggle").classList.add("hidden");
+    player.pause();
+    player.classList.add("hidden");
+    document.querySelectorAll(".cng-btn").forEach(b=>b.classList.remove("hidden"));
+    document.querySelectorAll(".channel-card").forEach(c=>c.classList.add("server-hover"));
+  } else {
+    document.getElementById("honorServerToggle").classList.remove("hidden");
+    document.querySelectorAll(".cng-btn").forEach(b=>b.classList.add("hidden"));
+    document.querySelectorAll(".channel-card").forEach(c=>c.classList.remove("server-hover"));
+    player.classList.remove("hidden");
+    if(currentChannelId && !honorServer){
+      loadChannel(channels.find(c=>c.channelId===currentChannelId));
+    }
+  }
+};
+
+// --- Honor Server ---
+const honorBtn = document.getElementById("honorServerToggle");
+honorBtn.onclick = () => {
+  if(serverMode) return; 
+  honorServer = !honorServer;
+  honorBtn.textContent = `🎛 Honor Server Channel: ${honorServer?"ON":"OFF"}`;
+};
+
+// --- Channel functions ---
+async function sendChannelChange(id){
+  if(!id) return;
+  try{ await fetch(`/${id}.cng`); console.log("Sent channel change →", id); }
+  catch(e){console.error(e);}
+}
+
+async function updateCurrentSong(){
+  if(!currentChannelId) return;
+  try{
+    const res = await fetch(`/${currentChannelId}.json`);
+    const t = await res.json();
+    const ttl = t.title||"";
+    const art = t.artists?.[0]?.name||"";
+    const alb = t.album?.title||"";
+    const artURL = t.album?.creativeArts?.find(a=>a.size==="MEDIUM")?.url || currentChannelArtwork;
+
+    const chName = channels.find(c=>c.channelId===currentChannelId)?.name || "";
+    channelInfo.textContent = `${chName}`;
+    songInfo.innerHTML = `${ttl}<br>${art}`;
+
+    artwork.src = artURL;
+    if('mediaSession' in navigator)
+      navigator.mediaSession.metadata = new MediaMetadata({title:ttl, artist:art, album:alb, artwork:[{src:artURL}]});
+  }catch(e){console.error(e);}
+}
+
 async function loadChannels(){
   try{
     const res = await fetch("/channels.m3u");
     const lines = (await res.text()).split(/\r?\n/);
     channels = [];
-
     for(let i=0;i<lines.length;i++){
       if(lines[i].startsWith("#EXTINF:")){
         const displayName = lines[i].split(",")[1]?.trim()||"Unknown";
@@ -324,7 +395,6 @@ async function loadChannels(){
   }catch(e){console.error(e);}
 }
 
-// Lazy load images
 function setupLazyLoading(){
   const imgs=document.querySelectorAll('#channelGrid img[data-logo]');
   const observer=new IntersectionObserver(entries=>{
@@ -341,25 +411,18 @@ function setupLazyLoading(){
   imgs.forEach(img=>observer.observe(img));
 }
 
-// Load channel
 function loadChannel(ch){
   currentChannelArtwork = ch.logo;
   currentChannelId = ch.channelId;
   channelInfo.textContent = `${ch.name}`;
   songInfo.textContent = "";
-  player.src = ch.url;
-  player.play().catch(()=>{});
+  if(!serverMode){
+    player.src = ch.url;
+    player.play().catch(()=>{});
+  }
   artwork.src = ch.logo;
 }
 
-// Send .cng
-async function sendChannelChange(id){
-  if(!id) return;
-  try{ await fetch(`/${id}.cng`); console.log("Sent channel change →", id); }
-  catch(e){console.error(e);}
-}
-
-// Poll /current.chn
 async function pollForcedChannel(){
   if(!honorServer) return;
   try{
@@ -373,27 +436,6 @@ async function pollForcedChannel(){
       }
     }
   }catch(e){}
-}
-
-// Update current song
-async function updateCurrentSong(){
-  if(!currentChannelId) return;
-  try{
-    const res = await fetch(`/${currentChannelId}.json`);
-    const t = await res.json();
-    const ttl = t.title||"";
-    const art = t.artists?.[0]?.name||"";
-    const alb = t.album?.title||"";
-    const artURL = t.album?.creativeArts?.find(a=>a.size==="MEDIUM")?.url || currentChannelArtwork;
-
-    const chName = channels.find(c=>c.channelId===currentChannelId)?.name || "";
-    channelInfo.textContent = `${chName}`;
-    songInfo.innerHTML = `${ttl}<br>${art}`;
-    artwork.src = artURL;
-
-    if('mediaSession' in navigator)
-      navigator.mediaSession.metadata = new MediaMetadata({title:ttl, artist:art, album:alb, artwork:[{src:artURL}]});
-  }catch(e){console.error(e);}
 }
 
 loadChannels();
