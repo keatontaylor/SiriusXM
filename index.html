@@ -72,22 +72,36 @@ document.getElementById("serverModeToggle").onclick = () => {
   serverMode = !serverMode;
   document.getElementById("serverModeToggle").textContent = `🛑 Server Mode: ${serverMode?"ON":"OFF"}`;
 
-  if(serverMode){
+  if (serverMode) {
     // Force honor server ON
     honorServer = true;
     honorBtn.classList.add("hidden");
 
+    // Abort current loading and remove audio source
     player.pause();
+
+    // Completely destroy current source
+    if (player.srcObject) {
+      player.srcObject = null;
+    }
+    player.src = "";
+    player.load();
+
+    // Override play to make it inert
+    player.play = async () => Promise.resolve();
+
+    // Optional: remove the element from the DOM
+    // player.parentNode?.removeChild(player);
+
     player.classList.add("hidden");
-    document.querySelectorAll(".cng-btn").forEach(b=>b.classList.remove("hidden"));
-    document.querySelectorAll(".channel-card").forEach(c=>c.classList.add("server-hover"));
+
+    document.querySelectorAll(".cng-btn").forEach(b => b.classList.remove("hidden"));
+    document.querySelectorAll(".channel-card").forEach(c => c.classList.add("server-hover"));
   } else {
-    honorBtn.classList.remove("hidden");
-    document.querySelectorAll(".cng-btn").forEach(b=>b.classList.add("hidden"));
-    document.querySelectorAll(".channel-card").forEach(c=>c.classList.remove("server-hover"));
     player.classList.remove("hidden");
-    if(currentChannelId && !honorServer){
-      loadChannel(channels.find(c=>c.channelId===currentChannelId));
+    player.play = HTMLAudioElement.prototype.play; // restore normal behavior
+    if (currentChannelId && !honorServer) {
+      loadChannel(channels.find(c => c.channelId === currentChannelId));
     }
   }
 };
@@ -162,6 +176,7 @@ async function loadChannels(){
           currentChannelArtwork = ch.logo;
           artwork.src = ch.logo;
           titleEl.textContent = ch.name;
+          
         } else {
           loadChannel(ch);
         }
