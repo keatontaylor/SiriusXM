@@ -22,7 +22,8 @@
   .cng-btn:hover {background:#666;}
   #now-playing{text-align:center;margin-top:20px;}
   #artwork{width:250px;height:250px;border-radius:12px;object-fit:cover; box-shadow:0 0 15px rgba(0,0,0,.6);margin-bottom:12px;}
-  #titleEl{font-size:1.4rem;font-weight:600;margin-bottom:10px;}
+  #channelInfo{font-size:1.4rem;font-weight:700;margin-bottom:6px;}
+  #songInfo{font-size:1rem;color:#ccc;}
   #player{width:300px;height:40px;margin-top:10px;}
   .hidden {display:none !important;}
 </style>
@@ -44,7 +45,8 @@
 <!-- Now Playing -->
 <div id="now-playing">
   <img id="artwork" src="play.png">
-  <div id="titleEl">Loading…</div>
+  <div id="channelInfo">Loading…</div>
+  <div id="songInfo"></div>
   <audio id="player" controls playsinline></audio>
 </div>
 
@@ -52,7 +54,8 @@
 const DEFAULT_ARTWORK="play.png";
 const player=document.getElementById("player");
 const artwork=document.getElementById("artwork");
-const titleEl=document.getElementById("titleEl");
+const channelInfo=document.getElementById("channelInfo");
+const songInfo=document.getElementById("songInfo");
 const drawer=document.getElementById("channelDrawer");
 
 let channels=[];
@@ -64,16 +67,14 @@ let honorServer = true; // default ON
 const honorBtn = document.getElementById("honorServerToggle");
 
 // Drawer
-document.getElementById("openChannelsBtn").onclick = () => drawer.classList.add("open");
-document.getElementById("closeDrawer").onclick = () => drawer.classList.remove("open");
-
 document.getElementById("openChannelsBtn").onclick = () => {
-  if(!serverMode && honorServer){
-    alert("⚠️ Cannot browse channels while Honor Server Channel is ON.");
+  if(serverMode || honorServer){
+    alert("Cannot browse channels while server mode or honor server channels is ON");
     return;
   }
   drawer.classList.add("open");
 };
+document.getElementById("closeDrawer").onclick = () => drawer.classList.remove("open");
 
 // Server Mode toggle
 document.getElementById("serverModeToggle").onclick = () => {
@@ -81,33 +82,20 @@ document.getElementById("serverModeToggle").onclick = () => {
   document.getElementById("serverModeToggle").textContent = `🛑 Server Mode: ${serverMode?"ON":"OFF"}`;
 
   if(serverMode){
-    // Force honor server ON
     honorServer = true;
     honorBtn.classList.add("hidden");
 
-    // STOP AUDIO completely
     player.pause();
-    player.src = "";   // cancel any downloads
-    player.load();
     player.classList.add("hidden");
-
     document.querySelectorAll(".cng-btn").forEach(b=>b.classList.remove("hidden"));
     document.querySelectorAll(".channel-card").forEach(c=>c.classList.add("server-hover"));
-
   } else {
-    // Restore UI
     honorBtn.classList.remove("hidden");
     document.querySelectorAll(".cng-btn").forEach(b=>b.classList.add("hidden"));
     document.querySelectorAll(".channel-card").forEach(c=>c.classList.remove("server-hover"));
     player.classList.remove("hidden");
-
-    // ALWAYS reload the currently selected channel
-    if(currentChannelId){
-      const ch = channels.find(c=>c.channelId===currentChannelId);
-      if(ch){
-        player.src = ch.url;
-        player.load();
-      }
+    if(currentChannelId && !honorServer){
+      loadChannel(channels.find(c=>c.channelId===currentChannelId));
     }
   }
 };
@@ -136,7 +124,12 @@ async function updateCurrentSong(){
     const art = t.artists?.[0]?.name||"";
     const alb = t.album?.title||"";
     const artURL = t.album?.creativeArts?.find(a=>a.size==="MEDIUM")?.url || currentChannelArtwork;
-    titleEl.innerHTML = `${ttl}<br>${artURL?art:""}`;
+
+    // Show channel + song info
+    const chName = channels.find(c=>c.channelId===currentChannelId)?.name || "";
+    channelInfo.textContent = `${currentChannelId} - ${chName}`;
+    songInfo.textContent = `${ttl} - ${art}`;
+
     artwork.src = artURL;
     if('mediaSession' in navigator)
       navigator.mediaSession.metadata = new MediaMetadata({title:ttl, artist:art, album:alb, artwork:[{src:artURL}]});
@@ -181,7 +174,8 @@ async function loadChannels(){
           currentChannelId = ch.channelId;
           currentChannelArtwork = ch.logo;
           artwork.src = ch.logo;
-          titleEl.textContent = ch.name;
+          channelInfo.textContent = `${ch.channelId} - ${ch.name}`;
+          songInfo.textContent = "";
         } else {
           loadChannel(ch);
         }
@@ -195,7 +189,8 @@ async function loadChannels(){
           currentChannelId = ch.channelId;
           currentChannelArtwork = ch.logo;
           artwork.src = ch.logo;
-          titleEl.textContent = ch.name;
+          channelInfo.textContent = `${ch.channelId} - ${ch.name}`;
+          songInfo.textContent = "";
         }
       });
 
@@ -227,13 +222,16 @@ function setupLazyLoading(){
 
 // Load channel (respects server mode)
 function loadChannel(ch){
-  currentChannelArtwork=ch.logo;
-  currentChannelId=ch.channelId;
+  currentChannelArtwork = ch.logo;
+  currentChannelId = ch.channelId;
+
+  channelInfo.textContent = `${ch.channelId} - ${ch.name}`;
+  songInfo.textContent = "";
+
   if(!serverMode){
     player.src = ch.url;
     player.play().catch(()=>{});
   }
-  titleEl.textContent = ch.name;
   artwork.src = ch.logo;
 }
 
