@@ -2,255 +2,42 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="theme-color" content="#0b0b0b">
-<title>Liquid Glass Modern HLS Player</title>
+<title>HLS Audio Player with Channels</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  /* --- Variables --- */
-  :root {
-    --bg-gradient: linear-gradient(135deg,#0b0b0b,#111);
-    --glass-bg: rgba(30,30,30,0.6);
-    --glass-blur: 25px;
-    --accent: linear-gradient(135deg,#ff6ec4,#7873f5);
-    --accent-hover: linear-gradient(135deg,#ff5fc0,#5f70f5);
-    --text-primary: #fff;
-    --text-secondary: #ccc;
-    --shadow: rgba(0,0,0,0.5);
-    --radius: 24px;
-    --button-radius: 16px;
-  }
-
-  * { box-sizing: border-box; margin:0; padding:0; }
-  html {
-    height: 100%;
-    background: var(--bg-gradient);
-  }
-
-  body {
-    min-height: 100%;
-    margin: 0;
-    padding: 20px;
-    font-family: 'SF Pro', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    color: var(--text-primary);
-    background: transparent; /* inherit from html */
-  }
-  /* --- Top Bar --- */
-  #topBar {
-    width: 100%;
-    max-width: 600px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 30px;
-  }
-
-  #topBar button {
-    background: var(--glass-bg);
-    border-radius: var(--button-radius);
-    border: 1px solid rgba(255,255,255,0.1);
-    padding: 10px 16px;
-    font-size: 1rem;
-    cursor: pointer;
-    box-shadow: 0 6px 20px var(--shadow);
-    transition: transform .15s, box-shadow .2s, background .2s;
-    backdrop-filter: blur(var(--glass-blur));
-  }
-  #topBar button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 30px var(--shadow);
-    background: rgba(50,50,50,0.7);
-  }
-
-  /* --- Settings Drawer --- */
-  #settingsDrawer {
-      position: fixed;
-      top: 0;
-      left: 0;
-      transform: translateX(-100%);
-      width: 300px;
-      height: 100vh;
-      background: var(--glass-bg);
-      backdrop-filter: blur(var(--glass-blur));
-      -webkit-backdrop-filter: blur(var(--glass-blur));
-      box-shadow: 6px 0 24px var(--shadow);
-      padding: 25px;
-      overflow-y: auto;
-      transition: transform .35s ease;
-      z-index: 9999;
-      border-top-right-radius: var(--radius);
-      border-bottom-right-radius: var(--radius);
-      border: 1px solid rgba(255,255,255,0.08);
-  }
-
-  #settingsDrawer.open { transform: translateX(0); }
-
-  #settingsDrawer h2 {
-      margin-bottom: 20px;
-      font-weight: 700;
-      font-size: 1.4rem;
-      color: var(--accent);
-      text-align: center;
-  }
-
-  #settingsDrawer button {
-      width: 100%;
-      margin-bottom: 12px;
-      font-weight: 600;
-      font-size: 0.95rem;
-      padding: 12px;
-      border-radius: var(--radius);
-      border: 1px solid rgba(255,255,255,0.1);
-      background: var(--glass-bg);
-      color: var(--text-primary);
-      box-shadow: 0 8px 24px var(--shadow);
-      cursor: pointer;
-      transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
-      backdrop-filter: blur(var(--glass-blur));
-  }
-
-  #settingsDrawer button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 14px 36px var(--shadow);
-      background: rgba(40,40,40,0.6);
-      border-color: rgba(255,255,255,0.2);
-  }
-
-
-  /* --- Channel Drawer --- */
-  #channelDrawer {
-    position: fixed;
-    top: 0;
-    right: 0;
-    transform: translateX(100%);
-    width: 400px;
-    height: 100vh;
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    box-shadow: -6px 0 24px var(--shadow);
-    padding: 25px;
-    overflow-y: auto;
-    transition: transform 0.35s ease;
-    z-index: 9999;
-    border-top-left-radius: var(--radius);
-    border-bottom-left-radius: var(--radius);
-    border: 1px solid rgba(255,255,255,0.08);
-  }
-  #channelDrawer.open { transform: translateX(0); }
-  #closeDrawer {
-    background: transparent;
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-    cursor: pointer;
-    float: right;
-    margin-bottom: 15px;
-  }
-  #channelDrawer h2 {
-    margin-bottom: 20px;
-    font-weight: 700;
-    font-size: 1.4rem;
-    color: var(--accent);
-    text-align: center;
-  }
-
-  /* --- Channel Grid --- */
-  #channelGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill,minmax(120px,1fr));
-    gap: 16px;
-  }
-
-  .channel-card {
-    background: var(--glass-bg);
-    border-radius: var(--radius);
-    padding: 12px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    transition: transform .25s ease, box-shadow .25s ease;
-    border: 1px solid rgba(255,255,255,0.05);
-  }
-  .channel-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 16px 40px var(--shadow);
-    border-color: rgba(255,255,255,0.15);
-  }
-  .channel-card img {
-    width: 90px;
-    height: 90px;
-    border-radius: var(--radius);
-    object-fit: cover;
-    opacity: 0;
-    transition: opacity .4s ease, transform .3s ease;
-  }
-  .channel-card:hover img { transform: scale(1.05); }
-  .channel-name { font-size: 0.9rem; font-weight: 500; text-align: center; color: var(--text-primary); }
-  .cng-btn {
-    padding: 6px 12px;
-    font-size: 0.75rem;
-    border-radius: var(--radius);
-    background: var(--accent);
-    color: var(--text-primary);
-    font-weight: 600;
-    border: none;
-    cursor: pointer;
-    transition: background .2s;
-  }
-  .cng-btn:hover { background: var(--accent-hover); }
-
-  /* --- Now Playing --- */
-  #now-playing {
-    margin-top: 20px;
-    text-align: center;
-    max-width: 450px;
-    width: 100%;
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    border-radius: var(--radius);
-    padding: 25px;
-    box-shadow: 0 16px 48px var(--shadow);
-    border: 1px solid rgba(255,255,255,0.05);
-  }
-  #artwork {
-    width: 320px;
-    height: 320px;
-    border-radius: var(--radius);
-    object-fit: cover;
-    box-shadow: 0 12px 36px var(--shadow);
-    margin-bottom: 16px;
-    transition: transform .3s ease;
-  }
-  #artwork:hover { transform: scale(1.02); }
-  #channelInfo { font-size: 1.7rem; font-weight: 700; margin-bottom: 10px; }
-  #songInfo { font-size: 1.1rem; color: var(--text-secondary); line-height: 1.4; }
-  #player { width: 100%; margin-top: 16px; border-radius: var(--radius); outline: none; }
-  .hidden { display: none !important; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #111; color:#fff; margin:0; overflow-x:hidden; }
+  button { background:#222; color:#fff; padding:12px 18px; font-size:1.1rem; font-weight:600; border-radius:10px; cursor:pointer; margin:10px auto; display:block; border:1px solid #444; box-shadow:0 2px 8px rgba(0,0,0,0.5); transition:transform .15s ease, box-shadow .15s ease, background .2s ease;}
+  button:hover {background:#333; transform:scale(1.03);}
+  button:active {transform:scale(.97);}
+  #channelDrawer {position:fixed; top:0; left:0; transform:translateX(-100%); width:350px; height:100vh; background:#1a1a1a; box-shadow:4px 0 20px rgba(0,0,0,0.5); padding:20px; overflow-y:auto; transition:transform .35s ease; z-index:9999;}
+  #channelDrawer.open {transform:translateX(0);}
+  #closeDrawer {background:#333; padding:6px 10px; font-size:.9rem; border-radius:4px; cursor:pointer; float:right; margin-bottom:10px;}
+  #channelGrid {display:grid; grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:14px; padding-top:35px;}
+  .channel-card {background:#222; border-radius:10px; padding:10px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:6px; cursor:pointer; transition:transform .2s ease, box-shadow .2s ease;}
+  .channel-card:hover {transform:scale(1.05); box-shadow:0 0 12px rgba(255,255,255,0.2);}
+  .channel-card.server-hover:hover {background:#333;}
+  .channel-card img {width:85px; height:85px; border-radius:6px; object-fit:cover; opacity:0; transition:opacity .4s ease;}
+  .channel-name {font-size:.85rem; margin-top:4px; text-align:center;}
+  .cng-btn {padding:4px 8px; font-size:.75rem; border-radius:6px; background:#444; color:#fff; border:none; cursor:pointer; transition:.2s;}
+  .cng-btn:hover {background:#666;}
+  #now-playing{text-align:center;margin-top:20px;}
+  #artwork{width:250px;height:250px;border-radius:12px;object-fit:cover; box-shadow:0 0 15px rgba(0,0,0,.6);margin-bottom:12px;}
+  #channelInfo{font-size:1.4rem;font-weight:700;margin-bottom:6px;}
+  #songInfo{font-size:1rem;color:#ccc;}
+  #player{width:300px;height:40px;margin-top:10px;}
+  .hidden {display:none !important;}
 </style>
 </head>
 <body>
 
-<!-- Top Bar -->
-<div id="topBar">
-  <button id="settingsBtn">⚙️</button>
-  <button id="openChannelsBtn">📡</button>
-</div>
-
-<!-- Settings Drawer -->
-<div id="settingsDrawer">
-  <div id="closeSettings">Close</div>
-  <h2>Settings</h2>
-  <button id="serverModeToggle" class="settings-btn">Server Mode: OFF</button>
-  <button id="honorServerToggle" class="settings-btn">Honor Server Channel: ON</button>
-</div>
+<!-- Toggles -->
+<button id="serverModeToggle">🛑 Server Mode: OFF</button>
+<button id="honorServerToggle">🎛 Honor Server Channel: ON</button>
 
 <!-- Channel Drawer -->
+<button id="openChannelsBtn">📡 Browse Channels</button>
 <div id="channelDrawer">
-  <div id="closeDrawer">Close</div>
+  <div id="closeDrawer">Close ✕</div>
   <h2>Channel List</h2>
   <div id="channelGrid"></div>
 </div>
@@ -270,17 +57,16 @@ const artwork=document.getElementById("artwork");
 const channelInfo=document.getElementById("channelInfo");
 const songInfo=document.getElementById("songInfo");
 const drawer=document.getElementById("channelDrawer");
-const settingsDrawer = document.getElementById("settingsDrawer");
-const settingsBtn = document.getElementById("settingsBtn");
 
 let channels=[];
 let currentChannelArtwork=DEFAULT_ARTWORK;
 let currentChannelId=null;
 
 let serverMode = false;
-let honorServer = true;
+let honorServer = true; // default ON
+const honorBtn = document.getElementById("honorServerToggle");
 
-// --- Open/Close drawers ---
+// Drawer
 document.getElementById("openChannelsBtn").onclick = () => {
   if(!serverMode && honorServer){
     alert("Cannot browse channels while server mode or honor server channels is ON");
@@ -290,27 +76,22 @@ document.getElementById("openChannelsBtn").onclick = () => {
 };
 document.getElementById("closeDrawer").onclick = () => drawer.classList.remove("open");
 
-document.getElementById("settingsBtn").onclick = () => {
-  document.getElementById("settingsDrawer").classList.toggle("open");
-};
-
-
-document.getElementById("closeSettings").onclick = () => settingsDrawer.classList.remove("open");
-
-// --- Server Mode ---
+// Server Mode toggle
 document.getElementById("serverModeToggle").onclick = () => {
   serverMode = !serverMode;
-  document.getElementById("serverModeToggle").textContent = `Server Mode: ${serverMode?"ON":"OFF"}`;
+  document.getElementById("serverModeToggle").textContent = `🛑 Server Mode: ${serverMode?"ON":"OFF"}`;
+
   if(serverMode){
     honorServer = true;
-    document.getElementById("honorServerToggle").classList.add("hidden");
+    honorBtn.classList.add("hidden");
+
     player.pause();
     player.classList.add("hidden");
-    document.querySelectorAll("#channelGrid  .cng-btn").forEach(b=>b.classList.remove("hidden"));
+    document.querySelectorAll(".cng-btn").forEach(b=>b.classList.remove("hidden"));
     document.querySelectorAll(".channel-card").forEach(c=>c.classList.add("server-hover"));
   } else {
-    document.getElementById("honorServerToggle").classList.remove("hidden");
-    document.querySelectorAll("#channelGrid  .cng-btn").forEach(b=>b.classList.add("hidden"));
+    honorBtn.classList.remove("hidden");
+    document.querySelectorAll(".cng-btn").forEach(b=>b.classList.add("hidden"));
     document.querySelectorAll(".channel-card").forEach(c=>c.classList.remove("server-hover"));
     player.classList.remove("hidden");
     if(currentChannelId && !honorServer){
@@ -319,33 +100,21 @@ document.getElementById("serverModeToggle").onclick = () => {
   }
 };
 
-// Close settings drawer when clicking outside
-document.addEventListener("click", (e) => {
-  const settingsDrawer = document.getElementById("settingsDrawer");
-  const settingsBtn = document.getElementById("settingsBtn");
-
-  if(settingsDrawer.classList.contains("open") &&
-     !settingsDrawer.contains(e.target) &&
-     e.target !== settingsBtn) {
-    settingsDrawer.classList.remove("open");
-  }
-});
-
-// --- Honor Server ---
-const honorBtn = document.getElementById("honorServerToggle");
+// Honor Server toggle (only when serverMode OFF)
 honorBtn.onclick = () => {
   if(serverMode) return; 
   honorServer = !honorServer;
-  honorBtn.textContent = `Honor Server Channel: ${honorServer?"ON":"OFF"}`;
+  honorBtn.textContent = `🎛 Honor Server Channel: ${honorServer?"ON":"OFF"}`;
 };
 
-// --- Channel functions ---
+// Send .cng
 async function sendChannelChange(id){
   if(!id) return;
   try{ await fetch(`/${id}.cng`); console.log("Sent channel change →", id); }
   catch(e){console.error(e);}
 }
 
+// Update current song
 async function updateCurrentSong(){
   if(!currentChannelId) return;
   try{
@@ -356,6 +125,7 @@ async function updateCurrentSong(){
     const alb = t.album?.title||"";
     const artURL = t.album?.creativeArts?.find(a=>a.size==="MEDIUM")?.url || currentChannelArtwork;
 
+    // Show channel + song info
     const chName = channels.find(c=>c.channelId===currentChannelId)?.name || "";
     channelInfo.textContent = `${chName}`;
     songInfo.innerHTML = `${ttl}<br>${art}`;
@@ -366,11 +136,13 @@ async function updateCurrentSong(){
   }catch(e){console.error(e);}
 }
 
+// Load channels
 async function loadChannels(){
   try{
     const res = await fetch("/channels.m3u");
     const lines = (await res.text()).split(/\r?\n/);
     channels = [];
+
     for(let i=0;i<lines.length;i++){
       if(lines[i].startsWith("#EXTINF:")){
         const displayName = lines[i].split(",")[1]?.trim()||"Unknown";
@@ -431,6 +203,7 @@ async function loadChannels(){
   }catch(e){console.error(e);}
 }
 
+// Lazy load images
 function setupLazyLoading(){
   const imgs=document.querySelectorAll('#channelGrid img[data-logo]');
   const observer=new IntersectionObserver(entries=>{
@@ -447,11 +220,14 @@ function setupLazyLoading(){
   imgs.forEach(img=>observer.observe(img));
 }
 
+// Load channel (respects server mode)
 function loadChannel(ch){
   currentChannelArtwork = ch.logo;
   currentChannelId = ch.channelId;
+
   channelInfo.textContent = `${ch.name}`;
   songInfo.textContent = "";
+
   if(!serverMode){
     player.src = ch.url;
     player.play().catch(()=>{});
@@ -459,6 +235,7 @@ function loadChannel(ch){
   artwork.src = ch.logo;
 }
 
+// Poll /current.chn
 async function pollForcedChannel(){
   if(!honorServer) return;
   try{
