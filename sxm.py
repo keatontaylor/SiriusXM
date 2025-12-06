@@ -589,7 +589,7 @@ def make_sirius_handler(sxm):
                     self.end_headers()
             except (BrokenPipeError, ConnectionResetError) as e:
                 # Client disconnected — safe to ignore
-                print(f"Client disconnected early: {self.client_address} ({e})")
+                self.log("A client disconnected mid stream, supressing BrokenPipe Error")
     return SiriusHandler
 
 # ---------------------- Main ------------------------
