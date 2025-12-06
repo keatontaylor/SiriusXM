@@ -5,203 +5,204 @@
 <title>Liquid Glass Modern HLS Player</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  :root {
-    --bg-gradient: linear-gradient(135deg,#0b0b0b,#111);
-    --glass-bg: rgba(30,30,30,0.55);
-    --glass-blur: 25px;
-    --accent: #0ff;
-    --accent-hover: #0cc;
-    --text-primary: #fff;
-    --text-secondary: #ccc;
-    --radius: 20px;
-    --shadow: rgba(0,0,0,0.5);
-  }
+:root {
+  --bg-gradient: linear-gradient(135deg,#0b0b0b,#111);
+  --glass-bg: rgba(30,30,30,0.5);
+  --glass-blur: 25px;
+  --accent: #FF6B6B;
+  --accent-hover: #FF4B4B;
+  --text-primary: #fff;
+  --text-secondary: #ccc;
+  --shadow: rgba(0,0,0,0.5);
+  --radius: 24px;
+}
 
-  * { box-sizing:border-box; margin:0; padding:0; }
-  body {
-    font-family: 'SF Pro', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background: var(--bg-gradient);
-    color: var(--text-primary);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    min-height: 100vh;
-    padding: 0;
-  }
+* { box-sizing: border-box; margin:0; padding:0; }
+body {
+  font-family: 'SF Pro', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg-gradient);
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
 
-  /* --- Top Bar --- */
-  #topBar {
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 20px;
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    background: var(--glass-bg);
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-    position: sticky;
-    top: 0;
-    z-index: 999;
-  }
+/* --- Top Bar --- */
+#topBar {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  background: var(--glass-bg);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius);
+  margin-bottom: 25px;
+  position: sticky;
+  top: 0;
+  z-index: 999;
+}
 
-  .top-btn {
-    background: var(--glass-bg);
-    border: none;
-    border-radius: var(--radius);
-    padding: 10px 14px;
-    cursor: pointer;
-    font-size: 1.1rem;
-    color: var(--text-primary);
-    box-shadow: 0 6px 18px var(--shadow);
-    transition: all 0.2s ease;
-  }
-  .top-btn:hover { 
-    background: rgba(40,40,40,0.6);
-    transform: translateY(-2px);
-    box-shadow: 0 10px 24px var(--shadow);
-  }
+.top-btn {
+  background: var(--glass-bg);
+  border: none;
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  box-shadow: 0 6px 18px var(--shadow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
 
-  /* --- Settings Panel --- */
-  #settingsPanel {
-    position: fixed;
-    top: 60px;
-    left: 10px;
-    width: 220px;
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    border-radius: var(--radius);
-    padding: 16px;
-    box-shadow: 0 12px 36px var(--shadow);
-    border: 1px solid rgba(255,255,255,0.08);
-    display: none;
-    z-index: 998;
-  }
-  #settingsPanel h3 { color: var(--accent); margin-bottom: 12px; font-size: 1.1rem; }
+.top-btn:hover {
+  background: rgba(40,40,40,0.6);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px var(--shadow);
+}
 
-  /* --- Channel Drawer --- */
-  #channelDrawer {
-    position: fixed;
-    top: 0;
-    right: 0;
-    transform: translateX(100%);
-    width: 100%;
-    max-width: 420px;
-    height: 100vh;
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    -webkit-backdrop-filter: blur(var(--glass-blur));
-    box-shadow: -6px 0 24px var(--shadow);
-    padding: 25px;
-    overflow-y: auto;
-    transition: transform 0.35s ease;
-    z-index: 997;
-    border-top-left-radius: var(--radius);
-    border-bottom-left-radius: var(--radius);
-    border: 1px solid rgba(255,255,255,0.08);
-  }
-  #channelDrawer.open { transform: translateX(0); }
-  #closeDrawer {
-    background: transparent;
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-    cursor: pointer;
-    float: right;
-    margin-bottom: 10px;
-  }
+/* --- Channel Drawer --- */
+#channelDrawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  transform: translateX(100%);
+  width: 400px;
+  height: 100vh;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  box-shadow: -6px 0 24px var(--shadow);
+  padding: 25px;
+  overflow-y: auto;
+  transition: transform 0.35s ease;
+  z-index: 9999;
+  border-top-left-radius: var(--radius);
+  border-bottom-left-radius: var(--radius);
+  border: 1px solid rgba(255,255,255,0.08);
+}
 
-  #channelDrawer h2 {
-    margin-bottom: 20px;
-    font-weight: 700;
-    font-size: 1.4rem;
-    color: var(--accent);
-    text-align: center;
-  }
+#channelDrawer.open { transform: translateX(0); }
+#closeDrawer {
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  float: right;
+}
+#channelDrawer h2 {
+  margin-bottom: 20px;
+  font-weight: 700;
+  font-size: 1.4rem;
+  color: var(--accent);
+  text-align: center;
+}
 
-  /* --- Channel Grid --- */
-  #channelGrid {
-    display: flex;
-    overflow-x: auto;
-    gap: 16px;
-    padding-bottom: 10px;
-  }
-  #channelGrid::-webkit-scrollbar { height: 8px; }
-  #channelGrid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+/* --- Channel Grid --- */
+#channelGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill,minmax(120px,1fr));
+  gap: 16px;
+}
 
-  .channel-card {
-    flex: 0 0 auto;
-    width: 110px;
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    border-radius: var(--radius);
-    padding: 12px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
-    border: 1px solid rgba(255,255,255,0.05);
-  }
-  .channel-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 16px 40px var(--shadow);
-    border-color: rgba(255,255,255,0.15);
-  }
-  .channel-card img {
-    width: 90px;
-    height: 90px;
-    border-radius: var(--radius);
-    object-fit: cover;
-    opacity: 0;
-    transition: opacity 0.4s ease, transform 0.3s ease;
-  }
-  .channel-card:hover img { transform: scale(1.05); }
-  .channel-name { font-size: 0.85rem; font-weight: 500; color: var(--text-primary); text-align: center; }
+.channel-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border-radius: var(--radius);
+  padding: 12px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+.channel-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 16px 40px var(--shadow);
+  border-color: rgba(255,255,255,0.15);
+}
 
-  .cng-btn {
-    padding: 6px 12px;
-    font-size: 0.75rem;
-    border-radius: var(--radius);
-    background: var(--accent);
-    color: #000;
-    font-weight: 600;
-    border: none;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-  .cng-btn:hover { background: var(--accent-hover); }
+.channel-card img {
+  width: 90px;
+  height: 90px;
+  border-radius: var(--radius);
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.4s ease, transform 0.3s ease;
+}
+.channel-card:hover img { transform: scale(1.05); }
 
-  /* --- Now Playing --- */
-  #now-playing {
-    margin-top: 30px;
-    text-align: center;
-    max-width: 450px;
-    width: 100%;
-    background: var(--glass-bg);
-    backdrop-filter: blur(var(--glass-blur));
-    border-radius: var(--radius);
-    padding: 25px;
-    box-shadow: 0 16px 48px var(--shadow);
-    border: 1px solid rgba(255,255,255,0.05);
-  }
+.channel-name { font-size: 0.9rem; font-weight: 500; text-align: center; color: var(--text-primary); }
 
-  #artwork {
-    width: 320px;
-    height: 320px;
-    border-radius: var(--radius);
-    object-fit: cover;
-    box-shadow: 0 12px 36px var(--shadow);
-    margin-bottom: 16px;
-    transition: transform 0.3s ease;
-  }
-  #artwork:hover { transform: scale(1.02); }
+.cng-btn {
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.cng-btn:hover { background: var(--accent-hover); }
 
-  #channelInfo { font-size: 1.7rem; font-weight: 700; margin-bottom: 10px; }
-  #songInfo { font-size: 1.1rem; color: var(--text-secondary); line-height: 1.4; }
-  #player { width: 100%; margin-top: 16px; border-radius: var(--radius); outline: none; }
-  .hidden { display:none !important; }
+/* --- Now Playing Panel --- */
+#now-playing {
+  margin-top: 30px;
+  text-align: center;
+  max-width: 450px;
+  width: 100%;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border-radius: var(--radius);
+  padding: 25px;
+  box-shadow: 0 16px 48px var(--shadow);
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+#artwork {
+  width: 320px;
+  height: 320px;
+  border-radius: var(--radius);
+  object-fit: cover;
+  box-shadow: 0 12px 36px var(--shadow);
+  margin-bottom: 16px;
+  transition: transform 0.3s ease;
+}
+#artwork:hover { transform: scale(1.02); }
+
+#channelInfo {
+  font-size: 1.7rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+#songInfo {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+#player {
+  width: 100%;
+  margin-top: 16px;
+  border-radius: var(--radius);
+  outline: none;
+}
+
+.hidden { display: none !important; }
 </style>
 </head>
 <body>
@@ -210,13 +211,6 @@
 <div id="topBar">
   <button id="settingsBtn" class="top-btn">⚙️</button>
   <button id="openChannelsBtn" class="top-btn">📡 Browse Channels</button>
-</div>
-
-<!-- Settings Panel -->
-<div id="settingsPanel">
-  <h3>Settings</h3>
-  <button id="serverModeToggle" class="top-btn" style="width:100%; margin-bottom:10px;">🛑 Server Mode: OFF</button>
-  <button id="honorServerToggle" class="top-btn" style="width:100%;">🎛 Honor Server Channel: ON</button>
 </div>
 
 <!-- Channel Drawer -->
@@ -235,91 +229,33 @@
 </div>
 
 <script>
+// --- Player Logic ---
 const DEFAULT_ARTWORK="play.png";
 const player=document.getElementById("player");
 const artwork=document.getElementById("artwork");
 const channelInfo=document.getElementById("channelInfo");
 const songInfo=document.getElementById("songInfo");
 const drawer=document.getElementById("channelDrawer");
-const settingsPanel=document.getElementById("settingsPanel");
 
 let channels=[];
 let currentChannelArtwork=DEFAULT_ARTWORK;
 let currentChannelId=null;
 
 let serverMode = false;
-let honorServer = true; // default ON
-const honorBtn = document.getElementById("honorServerToggle");
+let honorServer = true;
 
-// Toggle Settings Panel
-document.getElementById("settingsBtn").onclick = () => {
-  settingsPanel.style.display = settingsPanel.style.display==='block'?'none':'block';
-};
+const openChannelsBtn=document.getElementById("openChannelsBtn");
+const settingsBtn=document.getElementById("settingsBtn");
 
 // Drawer
-document.getElementById("openChannelsBtn").onclick = () => {
+openChannelsBtn.onclick = () => {
   if(!serverMode && honorServer){
-    alert("Cannot browse channels while honor server channels is ON");
+    alert("Cannot browse channels while server mode or honor server channels is ON");
     return;
   }
   drawer.classList.add("open");
 };
 document.getElementById("closeDrawer").onclick = () => drawer.classList.remove("open");
-
-// Server Mode toggle
-document.getElementById("serverModeToggle").onclick = () => {
-  serverMode = !serverMode;
-  document.getElementById("serverModeToggle").textContent = `🛑 Server Mode: ${serverMode?"ON":"OFF"}`;
-  if(serverMode){
-    honorServer = true;
-    honorBtn.classList.add("hidden");
-    player.pause();
-    player.classList.add("hidden");
-    document.querySelectorAll(".cng-btn").forEach(b=>b.classList.remove("hidden"));
-  } else {
-    honorBtn.classList.remove("hidden");
-    document.querySelectorAll(".cng-btn").forEach(b=>b.classList.add("hidden"));
-    player.classList.remove("hidden");
-    if(currentChannelId && !honorServer){
-      loadChannel(channels.find(c=>c.channelId===currentChannelId));
-    }
-  }
-};
-
-// Honor Server toggle (only when serverMode OFF)
-honorBtn.onclick = () => {
-  if(serverMode) return; 
-  honorServer = !honorServer;
-  honorBtn.textContent = `🎛 Honor Server Channel: ${honorServer?"ON":"OFF"}`;
-};
-
-// Send .cng
-async function sendChannelChange(id){
-  if(!id) return;
-  try{ await fetch(`/${id}.cng`); console.log("Sent channel change →", id); }
-  catch(e){console.error(e);}
-}
-
-// Update current song
-async function updateCurrentSong(){
-  if(!currentChannelId) return;
-  try{
-    const res = await fetch(`/${currentChannelId}.json`);
-    const t = await res.json();
-    const ttl = t.title||"";
-    const art = t.artists?.[0]?.name||"";
-    const alb = t.album?.title||"";
-    const artURL = t.album?.creativeArts?.find(a=>a.size==="MEDIUM")?.url || currentChannelArtwork;
-
-    const chName = channels.find(c=>c.channelId===currentChannelId)?.name || "";
-    channelInfo.textContent = `${chName}`;
-    songInfo.innerHTML = `${ttl}<br>${art}`;
-
-    artwork.src = artURL;
-    if('mediaSession' in navigator)
-      navigator.mediaSession.metadata = new MediaMetadata({title:ttl, artist:art, album:alb, artwork:[{src:artURL}]});
-  }catch(e){console.error(e);}
-}
 
 // Load channels
 async function loadChannels(){
@@ -327,6 +263,7 @@ async function loadChannels(){
     const res = await fetch("/channels.m3u");
     const lines = (await res.text()).split(/\r?\n/);
     channels = [];
+
     for(let i=0;i<lines.length;i++){
       if(lines[i].startsWith("#EXTINF:")){
         const displayName = lines[i].split(",")[1]?.trim()||"Unknown";
@@ -346,6 +283,7 @@ async function loadChannels(){
 
     const grid=document.getElementById("channelGrid");
     grid.innerHTML="";
+
     channels.forEach(ch=>{
       const card = document.createElement("div");
       card.className="channel-card";
@@ -409,11 +347,16 @@ function loadChannel(ch){
   currentChannelId = ch.channelId;
   channelInfo.textContent = `${ch.name}`;
   songInfo.textContent = "";
-  if(!serverMode){
-    player.src = ch.url;
-    player.play().catch(()=>{});
-  }
+  player.src = ch.url;
+  player.play().catch(()=>{});
   artwork.src = ch.logo;
+}
+
+// Send .cng
+async function sendChannelChange(id){
+  if(!id) return;
+  try{ await fetch(`/${id}.cng`); console.log("Sent channel change →", id); }
+  catch(e){console.error(e);}
 }
 
 // Poll /current.chn
@@ -432,11 +375,33 @@ async function pollForcedChannel(){
   }catch(e){}
 }
 
+// Update current song
+async function updateCurrentSong(){
+  if(!currentChannelId) return;
+  try{
+    const res = await fetch(`/${currentChannelId}.json`);
+    const t = await res.json();
+    const ttl = t.title||"";
+    const art = t.artists?.[0]?.name||"";
+    const alb = t.album?.title||"";
+    const artURL = t.album?.creativeArts?.find(a=>a.size==="MEDIUM")?.url || currentChannelArtwork;
+
+    const chName = channels.find(c=>c.channelId===currentChannelId)?.name || "";
+    channelInfo.textContent = `${chName}`;
+    songInfo.innerHTML = `${ttl}<br>${art}`;
+    artwork.src = artURL;
+
+    if('mediaSession' in navigator)
+      navigator.mediaSession.metadata = new MediaMetadata({title:ttl, artist:art, album:alb, artwork:[{src:artURL}]});
+  }catch(e){console.error(e);}
+}
+
 loadChannels();
 setInterval(updateCurrentSong,3000);
 setInterval(pollForcedChannel,5000);
 updateCurrentSong();
 pollForcedChannel();
 </script>
+
 </body>
 </html>
