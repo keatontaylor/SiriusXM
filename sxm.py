@@ -473,119 +473,123 @@ def make_sirius_handler(sxm):
             super().log_message(format + " %s", *args, extra_info)
 
         def do_GET(self):
-            if self.path == "/" or self.path == "/index.html":
-                try:
-                    with open("index.html", "rb") as f:
-                        content = f.read()
+            try:
+                if self.path == "/" or self.path == "/index.html":
+                    try:
+                        with open("index.html", "rb") as f:
+                            content = f.read()
 
+                        self.send_response(200)
+                        self.send_header("Content-type", "text/html")
+                        self.end_headers()
+                        self.wfile.write(content)
+                        return
+
+                    except FileNotFoundError:
+                        self.send_error(404, "index.html not found")
+                        return
+                elif self.path.startswith("/proxy/"):
+                    raw_url = urllib.parse.unquote(self.path.replace("/proxy/", "", 1))  # strip prefix
+
+                    # must only allow SiriusXM hosts (security)
+                    allowed_hosts = [
+                        "albumart.siriusxm.com",
+                        "pri.art.prod.streaming.siriusxm.com",
+                        "art.siriusxm.com"
+                    ]
+                    parsed = urllib.parse.urlparse(raw_url)
+
+                    if parsed.netloc not in allowed_hosts:
+                        self.send_error(403, "Domain not allowed")
+                        return
+
+                    try:
+                        r = requests.get(raw_url, timeout=10)
+                        self.send_response(r.status_code)
+                        self.send_header("Content-Type", r.headers.get("Content-Type", "image/png"))
+                        self.send_header("Cache-Control", "public, max-age=86400")  # cache 1 day
+                        self.end_headers()
+                        self.wfile.write(r.content)
+                    except Exception as e:
+                        self.send_error(500, f"Proxy request failed: {e}")
+                    return
+                elif self.path.endswith(".m3u"):
+                    playlist = sxm.channels_to_m3u()
+                    if playlist:
+                        self.send_response(200)
+                        self.send_header("Content-Type", "audio/mpegurl")
+                        self.end_headers()
+                        self.wfile.write(playlist.encode("utf-8"))
+                    else:
+                        self.send_error(404, "No channels available")
+                elif self.path.endswith(".xspf"):
+                    playlist = sxm.channels_to_xspf()
+                    if playlist:
+                        self.send_response(200)
+                        self.send_header("Content-Type", "application/xspf+xml")
+                        self.end_headers()
+                        self.wfile.write(playlist.encode("utf-8"))
+                    else:
+                        self.send_error(404, "No channels available")
+                elif self.path.endswith(".json"):
+                    guid, channel_id, channel_name, logo, channel_id_user = sxm.get_channel(self.path.rsplit('/', 1)[1][:-5])
+                    if channel_id in sxm.now_playing:
+                        self.send_response(200)
+                        self.send_header("Content-Type", "text/json")
+                        self.end_headers()
+                        self.wfile.write(json.dumps(sxm.now_playing[channel_id]).encode("utf-8"))
+                    else:
+                        self.send_response(200)
+                        self.send_header("Content-Type", "text/json")
+                        self.end_headers()
+                        self.wfile.write(json.dumps([]).encode("utf-8"))
+                elif self.path.endswith(".png"):
+                    with open("play.png", "rb") as f:
+                        content = f.read()
                     self.send_response(200)
-                    self.send_header("Content-type", "text/html")
+                    self.send_header("Content-Type", "image/png")
                     self.end_headers()
                     self.wfile.write(content)
-                    return
+                elif self.path.endswith('.m3u8'):
+                    data = sxm.get_playlist(self.path.rsplit('/', 1)[1][:-5])
+                    if data:
+                        # Remove any AES key lines
+                        lines = [line for line in data.split('\n') if not line.startswith('#EXT-X-KEY')]
+                        clean_playlist = '\n'.join(lines)
 
-                except FileNotFoundError:
-                    self.send_error(404, "index.html not found")
-                    return
-            elif self.path.startswith("/proxy/"):
-                raw_url = urllib.parse.unquote(self.path.replace("/proxy/", "", 1))  # strip prefix
-
-                # must only allow SiriusXM hosts (security)
-                allowed_hosts = [
-                    "albumart.siriusxm.com",
-                    "pri.art.prod.streaming.siriusxm.com",
-                    "art.siriusxm.com"
-                ]
-                parsed = urllib.parse.urlparse(raw_url)
-
-                if parsed.netloc not in allowed_hosts:
-                    self.send_error(403, "Domain not allowed")
-                    return
-
-                try:
-                    r = requests.get(raw_url, timeout=10)
-                    self.send_response(r.status_code)
-                    self.send_header("Content-Type", r.headers.get("Content-Type", "image/png"))
-                    self.send_header("Cache-Control", "public, max-age=86400")  # cache 1 day
-                    self.end_headers()
-                    self.wfile.write(r.content)
-                except Exception as e:
-                    self.send_error(500, f"Proxy request failed: {e}")
-                return
-            elif self.path.endswith(".m3u"):
-                playlist = sxm.channels_to_m3u()
-                if playlist:
-                    self.send_response(200)
-                    self.send_header("Content-Type", "audio/mpegurl")
-                    self.end_headers()
-                    self.wfile.write(playlist.encode("utf-8"))
-                else:
-                    self.send_error(404, "No channels available")
-            elif self.path.endswith(".xspf"):
-                playlist = sxm.channels_to_xspf()
-                if playlist:
-                    self.send_response(200)
-                    self.send_header("Content-Type", "application/xspf+xml")
-                    self.end_headers()
-                    self.wfile.write(playlist.encode("utf-8"))
-                else:
-                    self.send_error(404, "No channels available")
-            elif self.path.endswith(".json"):
-                guid, channel_id, channel_name, logo, channel_id_user = sxm.get_channel(self.path.rsplit('/', 1)[1][:-5])
-                if channel_id in sxm.now_playing:
-                    self.send_response(200)
-                    self.send_header("Content-Type", "text/json")
-                    self.end_headers()
-                    self.wfile.write(json.dumps(sxm.now_playing[channel_id]).encode("utf-8"))
-                else:
-                    self.send_response(200)
-                    self.send_header("Content-Type", "text/json")
-                    self.end_headers()
-                    self.wfile.write(json.dumps([]).encode("utf-8"))
-            elif self.path.endswith(".png"):
-                with open("play.png", "rb") as f:
-                    content = f.read()
-                self.send_response(200)
-                self.send_header("Content-Type", "image/png")
-                self.end_headers()
-                self.wfile.write(content)
-            elif self.path.endswith('.m3u8'):
-                data = sxm.get_playlist(self.path.rsplit('/', 1)[1][:-5])
-                if data:
-                    # Remove any AES key lines
-                    lines = [line for line in data.split('\n') if not line.startswith('#EXT-X-KEY')]
-                    clean_playlist = '\n'.join(lines)
-
-                    self.send_response(200)
-                    self.send_header('Content-Type', 'application/x-mpegURL')
-                    self.end_headers()
-                    self.wfile.write(clean_playlist.encode('utf-8'))
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'application/x-mpegURL')
+                        self.end_headers()
+                        self.wfile.write(clean_playlist.encode('utf-8'))
+                    else:
+                        self.send_response(500)
+                        self.end_headers()
+                elif self.path.endswith('.aac'):
+                    data = sxm.get_segment(self.path[1:])
+                    guid, channel_id, channel_name, logo, channel_id_user = sxm.get_channel(self.path[1:].split('/', 2)[1])
+                    if data:
+                        # Decrypt and prepend ID3v2 metadata
+                        data = sxm.decrypt_and_inject_id3_plain(
+                            data,
+                            self.HLS_AES_KEY,
+                            sxm.now_playing[channel_id]['artists'][0]['name'],
+                            sxm.now_playing[channel_id]['title'],
+                            channel_name,
+                            channel_id_user,
+                        )
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'audio/aac')
+                        self.end_headers()
+                        self.wfile.write(data)
+                    else:
+                        self.send_response(500)
+                        self.end_headers()
                 else:
                     self.send_response(500)
                     self.end_headers()
-            elif self.path.endswith('.aac'):
-                data = sxm.get_segment(self.path[1:])
-                guid, channel_id, channel_name, logo, channel_id_user = sxm.get_channel(self.path[1:].split('/', 2)[1])
-                if data:
-                    # Decrypt and prepend ID3v2 metadata
-                    data = sxm.decrypt_and_inject_id3_plain(
-                        data,
-                        self.HLS_AES_KEY,
-                        sxm.now_playing[channel_id]['artists'][0]['name'],
-                        sxm.now_playing[channel_id]['title'],
-                        channel_name,
-                        channel_id_user,
-                    )
-                    self.send_response(200)
-                    self.send_header('Content-Type', 'audio/aac')
-                    self.end_headers()
-                    self.wfile.write(data)
-                else:
-                    self.send_response(500)
-                    self.end_headers()
-            else:
-                self.send_response(500)
-                self.end_headers()
+            except (BrokenPipeError, ConnectionResetError) as e:
+                # Client disconnected — safe to ignore
+                print(f"Client disconnected early: {self.client_address} ({e})")
     return SiriusHandler
 
 # ---------------------- Main ------------------------
