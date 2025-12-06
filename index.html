@@ -8,110 +8,122 @@
   /* --- Variables --- */
   :root {
     --bg-gradient: linear-gradient(135deg,#0b0b0b,#111);
-    --glass-bg: rgba(30,30,30,0.6);
+    --glass-bg: rgba(30,30,30,0.5);
     --glass-blur: 25px;
-    --accent: linear-gradient(135deg,#ff6ec4,#7873f5);
-    --accent-hover: linear-gradient(135deg,#ff5fc0,#5f70f5);
+    --accent: #1ed760;       /* nicer modern green accent */
+    --accent-hover: #1db954;
     --text-primary: #fff;
     --text-secondary: #ccc;
     --shadow: rgba(0,0,0,0.5);
     --radius: 24px;
-    --button-radius: 16px;
   }
 
-  * { box-sizing: border-box; margin:0; padding:0; }
-  body {
-    font-family: 'SF Pro', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  /* --- Global Reset + iOS fix --- */
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
     background: var(--bg-gradient);
     color: var(--text-primary);
+    overscroll-behavior: none;
+  }
+
+  /* full viewport background for iOS Safari */
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: var(--bg-gradient);
+    z-index: -1;
+  }
+
+  body {
+    font-family: 'SF Pro', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     display: flex;
     flex-direction: column;
     align-items: center;
     min-height: 100vh;
-    padding: 20px;
   }
 
-  /* --- Top Bar --- */
-  #topBar {
-    width: 100%;
-    max-width: 600px;
+  /* --- Top Controls Panel --- */
+  #controlsPanel {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    width: 100%;
+    max-width: 480px;
     margin-bottom: 30px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 12px 36px var(--shadow);
   }
 
-  #topBar button {
+  #controlsPanel button {
     background: var(--glass-bg);
-    border-radius: var(--button-radius);
-    border: 1px solid rgba(255,255,255,0.1);
-    padding: 10px 16px;
+    color: var(--text-primary);
     font-size: 1rem;
+    font-weight: 600;
+    border-radius: var(--radius);
     cursor: pointer;
-    box-shadow: 0 6px 20px var(--shadow);
-    transition: transform .15s, box-shadow .2s, background .2s;
+    padding: 10px 16px;
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 8px 24px var(--shadow);
+    transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
     backdrop-filter: blur(var(--glass-blur));
   }
-  #topBar button:hover {
+
+  #controlsPanel button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 30px var(--shadow);
-    background: rgba(50,50,50,0.7);
+    box-shadow: 0 14px 36px var(--shadow);
+    background: rgba(40,40,40,0.6);
+    border-color: rgba(255,255,255,0.2);
+  }
+
+  #controlsPanel button:active {
+    transform: translateY(0);
   }
 
   /* --- Settings Drawer --- */
   #settingsDrawer {
-      position: fixed;
-      top: 0;
-      left: 0;
-      transform: translateX(-100%);
-      width: 300px;
-      height: 100vh;
-      background: var(--glass-bg);
-      backdrop-filter: blur(var(--glass-blur));
-      -webkit-backdrop-filter: blur(var(--glass-blur));
-      box-shadow: 6px 0 24px var(--shadow);
-      padding: 25px;
-      overflow-y: auto;
-      transition: transform .35s ease;
-      z-index: 9999;
-      border-top-right-radius: var(--radius);
-      border-bottom-right-radius: var(--radius);
-      border: 1px solid rgba(255,255,255,0.08);
+    position: fixed;
+    top: 0;
+    left: 0;
+    transform: translateX(-100%);
+    width: 360px;
+    height: 100vh;
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    box-shadow: 6px 0 24px var(--shadow);
+    padding: 25px;
+    overflow-y: auto;
+    transition: transform 0.35s ease;
+    z-index: 9999;
+    border-top-right-radius: var(--radius);
+    border-bottom-right-radius: var(--radius);
+    border: 1px solid rgba(255,255,255,0.08);
   }
 
   #settingsDrawer.open { transform: translateX(0); }
 
   #settingsDrawer h2 {
-      margin-bottom: 20px;
-      font-weight: 700;
-      font-size: 1.4rem;
-      color: var(--accent);
-      text-align: center;
+    margin-bottom: 20px;
+    font-weight: 700;
+    font-size: 1.4rem;
+    color: var(--accent);
+    text-align: center;
   }
 
   #settingsDrawer button {
-      width: 100%;
-      margin-bottom: 12px;
-      font-weight: 600;
-      font-size: 0.95rem;
-      padding: 12px;
-      border-radius: var(--radius);
-      border: 1px solid rgba(255,255,255,0.1);
-      background: var(--glass-bg);
-      color: var(--text-primary);
-      box-shadow: 0 8px 24px var(--shadow);
-      cursor: pointer;
-      transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
-      backdrop-filter: blur(var(--glass-blur));
+    margin-bottom: 12px;
+    width: 100%;
   }
-
-  #settingsDrawer button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 14px 36px var(--shadow);
-      background: rgba(40,40,40,0.6);
-      border-color: rgba(255,255,255,0.2);
-  }
-
 
   /* --- Channel Drawer --- */
   #channelDrawer {
@@ -123,6 +135,7 @@
     height: 100vh;
     background: var(--glass-bg);
     backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
     box-shadow: -6px 0 24px var(--shadow);
     padding: 25px;
     overflow-y: auto;
@@ -132,15 +145,9 @@
     border-bottom-left-radius: var(--radius);
     border: 1px solid rgba(255,255,255,0.08);
   }
+
   #channelDrawer.open { transform: translateX(0); }
-  #closeDrawer {
-    background: transparent;
-    color: var(--text-secondary);
-    font-size: 0.9rem;
-    cursor: pointer;
-    float: right;
-    margin-bottom: 15px;
-  }
+
   #channelDrawer h2 {
     margin-bottom: 20px;
     font-weight: 700;
@@ -158,6 +165,8 @@
 
   .channel-card {
     background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
     border-radius: var(--radius);
     padding: 12px;
     text-align: center;
@@ -166,7 +175,7 @@
     align-items: center;
     gap: 8px;
     cursor: pointer;
-    transition: transform .25s ease, box-shadow .25s ease;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
     border: 1px solid rgba(255,255,255,0.05);
   }
   .channel-card:hover {
@@ -174,42 +183,52 @@
     box-shadow: 0 16px 40px var(--shadow);
     border-color: rgba(255,255,255,0.15);
   }
+
   .channel-card img {
     width: 90px;
     height: 90px;
     border-radius: var(--radius);
     object-fit: cover;
     opacity: 0;
-    transition: opacity .4s ease, transform .3s ease;
+    transition: opacity 0.4s ease, transform 0.3s ease;
   }
   .channel-card:hover img { transform: scale(1.05); }
-  .channel-name { font-size: 0.9rem; font-weight: 500; text-align: center; color: var(--text-primary); }
+
+  .channel-name {
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-align: center;
+    color: var(--text-primary);
+  }
+
   .cng-btn {
     padding: 6px 12px;
     font-size: 0.75rem;
     border-radius: var(--radius);
     background: var(--accent);
-    color: var(--text-primary);
+    color: #000;
     font-weight: 600;
     border: none;
     cursor: pointer;
-    transition: background .2s;
+    transition: background 0.2s;
   }
   .cng-btn:hover { background: var(--accent-hover); }
 
-  /* --- Now Playing --- */
+  /* --- Now Playing Panel --- */
   #now-playing {
-    margin-top: 20px;
+    margin-top: 30px;
     text-align: center;
     max-width: 450px;
     width: 100%;
     background: var(--glass-bg);
     backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
     border-radius: var(--radius);
     padding: 25px;
     box-shadow: 0 16px 48px var(--shadow);
     border: 1px solid rgba(255,255,255,0.05);
   }
+
   #artwork {
     width: 320px;
     height: 320px;
@@ -217,13 +236,31 @@
     object-fit: cover;
     box-shadow: 0 12px 36px var(--shadow);
     margin-bottom: 16px;
-    transition: transform .3s ease;
+    transition: transform 0.3s ease;
   }
   #artwork:hover { transform: scale(1.02); }
-  #channelInfo { font-size: 1.7rem; font-weight: 700; margin-bottom: 10px; }
-  #songInfo { font-size: 1.1rem; color: var(--text-secondary); line-height: 1.4; }
-  #player { width: 100%; margin-top: 16px; border-radius: var(--radius); outline: none; }
+
+  #channelInfo {
+    font-size: 1.7rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+
+  #songInfo {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+  }
+
+  #player {
+    width: 100%;
+    margin-top: 16px;
+    border-radius: var(--radius);
+    outline: none;
+  }
+
   .hidden { display: none !important; }
+
 </style>
 </head>
 <body>
